@@ -1,0 +1,5 @@
+/frontend/wolf/node_modules
+/frontend/wolf/.vscode
+/frontend/wolf/.env
+/backend/node_modules
+/backend/.env
