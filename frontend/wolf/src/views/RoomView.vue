@@ -55,10 +55,26 @@
             <div 
               v-for="user in connectedUsers" 
               :key="user"
-              class="p-3 bg-gray-700/50 rounded-lg flex items-center gap-3"
+              :class="[
+                'p-3 rounded-lg flex items-center gap-3 transition-colors',
+                user === socketStore.username 
+                  ? 'bg-purple-900/50 border border-purple-700/50' 
+                  : 'bg-gray-700/50'
+              ]"
             >
               <div class="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>{{ user }}</span>
+              <div class="flex items-center gap-2 flex-1">
+                <span>{{ user }}</span>
+                <!-- Couronne pour le créateur -->
+                <svg 
+                  v-if="isRoomCreator(user)"
+                  class="w-4 h-4 text-yellow-500" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                >
+                  <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z"/>
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -126,8 +142,14 @@ export default {
     const messages = ref([]);
     const newMessage = ref('');
     const chatBox = ref(null);
+    const roomCreator = ref('');
 
     const hasUsername = computed(() => !!socketStore.username);
+
+    // Fonction pour vérifier si un utilisateur est le créateur
+    const isRoomCreator = (username) => {
+      return username === roomCreator.value;
+    };
 
     const scrollToBottom = async () => {
       await nextTick();
@@ -139,21 +161,23 @@ export default {
     onMounted(() => {
       socketStore.socket.emit('checkRoom', props.roomCode);
       
-      socketStore.socket.once('roomCheck', (exists) => {
+      socketStore.socket.once('roomCheck', ({ exists, creator }) => {
         if (!exists) {
           alert("Cette room n'existe pas !");
           router.push('/');
           return;
         }
         
+        roomCreator.value = creator;
         if (socketStore.username) {
           joinRoom();
         }
       });
 
       // Écouteurs de messages
-      socketStore.socket.on('userList', (users) => {
+      socketStore.socket.on('userList', ({ users, creator }) => {
         connectedUsers.value = users;
+        roomCreator.value = creator;
       });
 
       socketStore.socket.on('message', (message) => {
@@ -174,6 +198,7 @@ export default {
       if (socketStore.username) {
         leaveRoom();
       }
+      socketStore.socket.off('userList');
       socketStore.socket.off('message');
       socketStore.socket.off('systemMessage');
     });
@@ -226,10 +251,12 @@ export default {
       messages,
       newMessage,
       chatBox,
+      socketStore,
       setUsername,
       sendMessage,
       leaveRoom,
-      copyRoomLink
+      copyRoomLink,
+      isRoomCreator
     };
   }
 };
