@@ -1,84 +1,99 @@
 <template>
-  <div class="max-w-2xl mx-auto p-4">
-    <!-- Modal pour le nom d'utilisateur -->
-    <div v-if="!hasUsername" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-        <h2 class="text-xl font-bold mb-4">Entrez votre nom d'utilisateur</h2>
+  <div class="min-h-screen p-4">
+    <!-- Modal username -->
+    <div v-if="!hasUsername" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="wolf-card w-full max-w-md p-6">
+        <h2 class="text-2xl font-bold mb-6 text-purple-400">Qui êtes-vous ?</h2>
         <input 
           v-model="tempUsername" 
           type="text" 
-          class="w-full border p-2 rounded mb-4"
-          placeholder="Votre nom"
+          class="wolf-input mb-4"
+          placeholder="Entrez votre nom..."
           @keyup.enter="setUsername"
         >
         <button 
           @click="setUsername"
-          class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+          class="wolf-button-primary w-full"
         >
-          Rejoindre la room
+          Rejoindre la partie
         </button>
       </div>
     </div>
 
-    <!-- Contenu de la room -->
-    <div v-else class="bg-gray-100 p-4 rounded mb-4">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Room: {{ roomCode }}</h2>
-        <button 
-          @click="copyRoomLink"
-          class="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        >
-          Copier le lien
-        </button>
-      </div>
-      
-      <div class="grid grid-cols-3 gap-4">
-        <!-- Liste des utilisateurs -->
-        <div class="col-span-1">
-          <h3 class="font-bold mb-2">Utilisateurs connectés:</h3>
-          <ul class="list-disc pl-4">
-            <li v-for="user in connectedUsers" :key="user">
-              {{ user }}
-            </li>
-          </ul>
-          
+    <!-- Contenu principal -->
+    <div v-else class="max-w-6xl mx-auto">
+      <!-- En-tête -->
+      <div class="flex justify-between items-center mb-6">
+        <div>
+          <h2 class="text-2xl font-bold text-purple-400">
+            Room: <span class="text-gray-300">{{ roomCode }}</span>
+          </h2>
+          <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
+        </div>
+        <div class="flex gap-4">
+          <button 
+            @click="copyRoomLink"
+            class="wolf-button-secondary"
+          >
+            Inviter
+          </button>
           <button 
             @click="leaveRoom"
-            class="bg-red-500 text-white p-2 rounded hover:bg-red-600 mt-4 w-full"
+            class="wolf-button-danger"
           >
-            Quitter la room
+            Quitter
           </button>
         </div>
-        
-        <!-- Chat -->
-        <div class="col-span-2 bg-white rounded shadow">
-          <!-- Messages -->
-          <div class="h-96 p-4 overflow-y-auto" ref="chatBox">
-            <div v-for="(msg, index) in messages" :key="index" class="mb-2">
-              <!-- Message système -->
-              <div v-if="msg.type === 'system'" class="text-gray-500 italic text-sm">
-                {{ msg.content }}
-              </div>
-              <!-- Message utilisateur -->
-              <div v-else class="text-gray-800">
-                <span class="font-bold">{{ msg.username }}:</span>
-                {{ msg.content }}
-              </div>
+      </div>
+
+      <!-- Grille principale -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Liste des joueurs -->
+        <div class="wolf-card p-6">
+          <h3 class="text-lg font-bold mb-4 text-purple-400">Villageois</h3>
+          <div class="space-y-2">
+            <div 
+              v-for="user in connectedUsers" 
+              :key="user"
+              class="p-3 bg-gray-700/50 rounded-lg flex items-center gap-3"
+            >
+              <div class="w-2 h-2 rounded-full bg-green-500"></div>
+              <span>{{ user }}</span>
             </div>
           </div>
-          
+        </div>
+
+        <!-- Chat -->
+        <div class="lg:col-span-3 wolf-card flex flex-col" style="height: calc(100vh - 200px)">
+          <!-- Messages -->
+          <div class="flex-1 p-6 overflow-y-auto space-y-4" ref="chatBox">
+            <div 
+              v-for="(msg, index) in messages" 
+              :key="index"
+              :class="msg.type === 'system' ? 'text-purple-400 text-sm italic' : 'text-gray-300'"
+            >
+              <template v-if="msg.type === 'system'">
+                {{ msg.content }}
+              </template>
+              <template v-else>
+                <span class="text-purple-400 font-medium">{{ msg.username }}:</span>
+                {{ msg.content }}
+              </template>
+            </div>
+          </div>
+
           <!-- Input du chat -->
-          <div class="p-4 border-t">
-            <form @submit.prevent="sendMessage" class="flex gap-2">
+          <div class="p-4 border-t border-gray-700">
+            <form @submit.prevent="sendMessage" class="flex gap-3">
               <input 
                 v-model="newMessage" 
                 type="text" 
-                class="flex-1 border p-2 rounded"
+                class="wolf-input flex-1"
                 placeholder="Votre message..."
               >
               <button 
                 type="submit"
-                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                class="wolf-button-primary whitespace-nowrap"
               >
                 Envoyer
               </button>
