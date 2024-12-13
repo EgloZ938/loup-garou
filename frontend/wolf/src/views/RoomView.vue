@@ -28,12 +28,30 @@
           <h2 class="text-2xl font-bold text-purple-400">
             Room: <span class="text-gray-300">{{ roomCode }}</span>
           </h2>
-          <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
+          <div class="flex items-center gap-2">
+            <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
+            <span class="text-purple-400 text-sm">({{ connectedUsers.length }}/16 joueurs)</span>
+          </div>
         </div>
         <div class="flex gap-4">
+          <!-- Bouton pour lancer la partie (uniquement pour le créateur) -->
+          <button 
+            v-if="isRoomCreator(socketStore.username) && !gameStarted"
+            @click="startGame"
+            :disabled="connectedUsers.length < 6"
+            class="wolf-button-primary"
+            :class="{'opacity-50 cursor-not-allowed': connectedUsers.length < 6}"
+          >
+            Lancer la partie
+            <span v-if="connectedUsers.length < 6" class="text-sm block">
+              ({{ 6 - connectedUsers.length }} joueurs manquants)
+            </span>
+          </button>
+
           <button 
             @click="copyRoomLink"
             class="wolf-button-secondary"
+            :disabled="connectedUsers.length >= 16"
           >
             Inviter
           </button>
@@ -44,6 +62,14 @@
             Quitter
           </button>
         </div>
+      </div>
+
+      <!-- Message d'attente -->
+      <div v-if="!gameStarted && connectedUsers.length < 6" 
+           class="bg-purple-900/30 border border-purple-500/30 rounded-lg p-4 mb-6 text-center">
+        <p class="text-purple-300">
+          En attente de plus de joueurs... (minimum 6 joueurs pour commencer)
+        </p>
       </div>
 
       <!-- Grille principale -->
@@ -143,12 +169,18 @@ export default {
     const newMessage = ref('');
     const chatBox = ref(null);
     const roomCreator = ref('');
+    const gameStarted = ref(false);
 
     const hasUsername = computed(() => !!socketStore.username);
 
-    // Fonction pour vérifier si un utilisateur est le créateur
     const isRoomCreator = (username) => {
       return username === roomCreator.value;
+    };
+
+    const startGame = () => {
+      if (connectedUsers.value.length >= 6 && isRoomCreator(socketStore.username)) {
+        socketStore.socket.emit('startGame', props.roomCode);
+      }
     };
 
     const scrollToBottom = async () => {
@@ -161,9 +193,15 @@ export default {
     onMounted(() => {
       socketStore.socket.emit('checkRoom', props.roomCode);
       
-      socketStore.socket.once('roomCheck', ({ exists, creator }) => {
+      socketStore.socket.once('roomCheck', ({ exists, creator, isFull }) => {
         if (!exists) {
           alert("Cette room n'existe pas !");
+          router.push('/');
+          return;
+        }
+
+        if (isFull) {
+          alert("Cette room est complète (16/16 joueurs) !");
           router.push('/');
           return;
         }
@@ -174,7 +212,6 @@ export default {
         }
       });
 
-      // Écouteurs de messages
       socketStore.socket.on('userList', ({ users, creator }) => {
         connectedUsers.value = users;
         roomCreator.value = creator;
@@ -192,6 +229,10 @@ export default {
         });
         scrollToBottom();
       });
+
+      socketStore.socket.on('gameStatus', ({ started }) => {
+        gameStarted.value = started;
+      });
     });
 
     onUnmounted(() => {
@@ -201,6 +242,7 @@ export default {
       socketStore.socket.off('userList');
       socketStore.socket.off('message');
       socketStore.socket.off('systemMessage');
+      socketStore.socket.off('gameStatus');
     });
 
     const setUsername = () => {
@@ -252,11 +294,13 @@ export default {
       newMessage,
       chatBox,
       socketStore,
+      gameStarted,
       setUsername,
       sendMessage,
       leaveRoom,
       copyRoomLink,
-      isRoomCreator
+      isRoomCreator,
+      startGame
     };
   }
 };
