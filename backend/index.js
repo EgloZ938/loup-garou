@@ -122,6 +122,49 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('promotePlayer', ({ room, newCreator, currentCreator }) => {
+        if (rooms.has(room) && roomCreators.get(room) === currentCreator) {
+            roomCreators.set(room, newCreator);
+            io.to(room).emit('userList', {
+                users: Array.from(rooms.get(room)),
+                creator: newCreator
+            });
+            io.to(room).emit('systemMessage', `${newCreator} est maintenant le chef de la partie`);
+        }
+    });
+
+    socket.on('kickPlayer', ({ room, username }) => {
+        if (rooms.has(room)) {
+            const creator = roomCreators.get(room);
+            const currentUser = socket.handshake.auth?.username;
+
+            console.log('Debug kick :', {
+                creator,
+                currentUser,
+                userToKick: username,
+                socketAuth: socket.handshake.auth
+            });
+
+            // Vérification que la demande vient du créateur
+            if (creator === currentUser) {
+                rooms.get(room).delete(username);
+
+                // Notifier tout le monde du kick
+                io.to(room).emit('userList', {
+                    users: Array.from(rooms.get(room)),
+                    creator: roomCreators.get(room)
+                });
+                io.to(room).emit('systemMessage', `${username} a été exclu(e) de la partie`);
+                io.to(room).emit('playerKicked', { username });
+            } else {
+                console.log('Tentative de kick non autorisée:', {
+                    requestBy: currentUser,
+                    creator: creator
+                });
+            }
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Un utilisateur s\'est déconnecté');
     });

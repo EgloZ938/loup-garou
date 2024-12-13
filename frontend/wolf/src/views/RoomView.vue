@@ -77,7 +77,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Liste des joueurs -->
         <div
-          class="wolf-card p-6 flex flex-col"
+          class="wolf-card p-6 flex flex-col relative"
           style="height: calc(100vh - 200px)"
         >
           <h3 class="text-lg font-bold mb-4 text-purple-400">Villageois</h3>
@@ -88,11 +88,17 @@
                 v-for="user in connectedUsers"
                 :key="user"
                 :class="[
-                  'p-3 rounded-lg flex items-center gap-3 transition-colors',
+                  'p-3 rounded-lg flex items-center gap-3 transition-colors cursor-default',
                   user === socketStore.username
                     ? 'bg-purple-900/50 border border-purple-700/50'
                     : 'bg-gray-700/50',
                 ]"
+                @contextmenu.prevent="
+                  isRoomCreator(socketStore.username) &&
+                  user !== socketStore.username
+                    ? showContextMenu($event, user)
+                    : null
+                "
               >
                 <div class="w-2 h-2 rounded-full bg-green-500"></div>
                 <div class="flex items-center gap-2 flex-1">
@@ -112,6 +118,66 @@
               </div>
             </div>
           </div>
+
+          <!-- Menu contextuel -->
+          <div
+            v-if="contextMenu.show"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            @click="closeContextMenu"
+          >
+            <div
+              class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 w-64"
+              @click.stop
+            >
+              <p class="text-gray-300 mb-4">
+                Que souhaitez-vous faire avec {{ contextMenu.user }} ?
+              </p>
+
+              <div class="space-y-2">
+                <button
+                  @click="promotePlayer(contextMenu.user)"
+                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded"
+                >
+                  <svg
+                    class="w-4 h-4 text-yellow-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z"
+                    />
+                  </svg>
+                  Promouvoir
+                </button>
+
+                <button
+                  @click="kickPlayer(contextMenu.user)"
+                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded text-red-400"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"
+                    />
+                  </svg>
+                  Exclure
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fermeture du div de la liste des joueurs -->
         </div>
 
         <!-- Chat -->
@@ -188,11 +254,45 @@ export default {
     const chatBox = ref(null);
     const roomCreator = ref("");
     const gameStarted = ref(false);
+    const contextMenu = ref({
+      show: false,
+      user: null,
+    });
 
     const hasUsername = computed(() => !!socketStore.username);
 
     const isRoomCreator = (username) => {
       return username === roomCreator.value;
+    };
+
+    const closeContextMenu = () => {
+      contextMenu.value.show = false;
+    };
+
+    const showContextMenu = (event, user) => {
+      event.preventDefault();
+      contextMenu.value = {
+        show: true,
+        user: user,
+      };
+    };
+
+    const promotePlayer = (username) => {
+      socketStore.socket.emit("promotePlayer", {
+        room: props.roomCode,
+        newCreator: username,
+        currentCreator: socketStore.username,
+      });
+      closeContextMenu();
+    };
+
+    const kickPlayer = (username) => {
+      console.log("Tentative d'exclure:", username);
+      socketStore.socket.emit("kickPlayer", {
+        room: props.roomCode,
+        username: username,
+      });
+      closeContextMenu();
     };
 
     const startGame = () => {
@@ -211,8 +311,23 @@ export default {
       }
     };
 
+    const handleContextMenu = (event, user) => {
+      console.log("Click droit sur:", user);
+      console.log("Username actuel:", socketStore.username);
+      console.log("Créateur:", roomCreator.value);
+      console.log("Est créateur?", isRoomCreator(socketStore.username));
+
+      if (
+        isRoomCreator(socketStore.username) &&
+        user !== socketStore.username
+      ) {
+        showContextMenu(event, user);
+      }
+    };
+
     onMounted(() => {
       socketStore.socket.emit("checkRoom", props.roomCode);
+      document.addEventListener("click", closeContextMenu);
 
       socketStore.socket.once("roomCheck", ({ exists, creator, isFull }) => {
         if (!exists) {
@@ -254,26 +369,38 @@ export default {
       socketStore.socket.on("gameStatus", ({ started }) => {
         gameStarted.value = started;
       });
+
+      socketStore.socket.on("playerKicked", ({ username }) => {
+        if (username === socketStore.username) {
+          alert("Vous avez été exclu de la partie");
+          router.push("/");
+        }
+      });
     });
 
     onUnmounted(() => {
       if (socketStore.username) {
         leaveRoom();
       }
+      document.removeEventListener("click", closeContextMenu);
       socketStore.socket.off("userList");
       socketStore.socket.off("message");
       socketStore.socket.off("systemMessage");
       socketStore.socket.off("gameStatus");
+      socketStore.socket.off("playerKicked");
     });
 
     const setUsername = () => {
       if (!tempUsername.value) return;
-
       socketStore.setUsername(tempUsername.value);
       joinRoom();
     };
 
     const joinRoom = () => {
+      // Configuration de l'auth
+      socketStore.socket.auth = { username: socketStore.username };
+      socketStore.socket.disconnect().connect(); // Force la reconnexion avec la nouvelle auth
+
       socketStore.socket.emit("joinRoom", {
         username: socketStore.username,
         room: props.roomCode,
@@ -316,12 +443,16 @@ export default {
       chatBox,
       socketStore,
       gameStarted,
+      contextMenu,
       setUsername,
       sendMessage,
       leaveRoom,
       copyRoomLink,
       isRoomCreator,
       startGame,
+      showContextMenu,
+      promotePlayer,
+      kickPlayer,
     };
   },
 };
