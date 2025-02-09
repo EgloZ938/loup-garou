@@ -62,17 +62,15 @@ async function assignRoles(players) {
                 **IMPORTANT** :
                 - **Ne pas attribuer les rôles au hasard**, respecter l'équilibre défini ci-dessus.
                 - **Le jeu doit être jouable et stratégique**, en évitant une surcharge de rôles spéciaux.
-                - Réponds **uniquement** avec un JSON structuré ainsi :
-                {
-                "players": [
-                    {
-                    "pseudo": "nom_du_joueur",
-                    "role": "role_du_joueur",
-                    "camp": "camp_du_joueur"
-                    }
-                ]
-                }
-                Pas de texte supplémentaire, uniquement le JSON.
+
+
+                ATTENTION: Ta réponse doit être UNIQUEMENT le JSON brut sans aucun texte avant ni après, pas de "Rôles attribués:", pas de "\`\`\`json", strictement le JSON et rien d'autre.
+                - Pour les Loups-Garous : le camp doit être "Loups-Garous"
+                - Pour les Villageois : le camp doit être "Villageois"
+                - Pour les rôles neutres : le camp doit être "Neutre"
+
+                Format exact attendu :
+                {"players":[{"pseudo":"[nom]","role":"[role]","camp":"Loups-Garous ou Villageois ou Neutre"}]}
                 `
             }]
         });
@@ -162,12 +160,26 @@ io.on('connection', (socket) => {
                 try {
                     const roleAssignments = await assignRoles(currentPlayers);
                     if (roleAssignments) {
-                        gameStatus.set(roomCode, true);
-                        io.to(roomCode).emit('gameStatus', {
-                            started: true,
-                            roles: roleAssignments
-                        });
-                        io.to(roomCode).emit('systemMessage', 'La partie commence !');
+                        // Nettoyage supplémentaire de la réponse
+                        const cleanedResponse = roleAssignments
+                            .replace(/^[^{]*/, '') // Enlève tout ce qui précède le premier {
+                            .replace(/[^}]*$/, '') // Enlève tout ce qui suit le dernier }
+                            .trim(); // Enlève les espaces inutiles
+
+                        try {
+                            // On vérifie que c'est bien du JSON valide
+                            const parsedRoles = JSON.parse(cleanedResponse);
+
+                            gameStatus.set(roomCode, true);
+                            io.to(roomCode).emit('gameStatus', {
+                                started: true,
+                                roles: cleanedResponse // On envoie la version nettoyée
+                            });
+                            io.to(roomCode).emit('systemMessage', 'La partie commence !');
+                        } catch (parseError) {
+                            console.error('Erreur de parsing JSON:', parseError);
+                            io.to(roomCode).emit('systemMessage', 'Erreur lors du lancement de la partie');
+                        }
                     }
                 } catch (error) {
                     console.error('Erreur lors de l\'attribution des rôles:', error);

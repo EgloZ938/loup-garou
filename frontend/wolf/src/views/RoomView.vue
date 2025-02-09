@@ -160,11 +160,33 @@
         </div>
       </div>
 
+      <!-- Loader-->
       <div v-if="showLoader"
         class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="text-center">
           <div class="w-16 h-16 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p class="text-purple-400">Attribution des rôles en cours...</p>
+        </div>
+      </div>
+
+      <!-- Révélation du rôle -->
+      <div v-if="showRoleReveal"
+        class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="text-center space-y-6 transform transition-all duration-700 ease-out"
+          :class="{ 'translate-y-0 opacity-100': showRoleReveal, 'translate-y-10 opacity-0': !showRoleReveal }">
+          <h2 class="text-3xl font-bold text-purple-400">
+            Vous êtes
+          </h2>
+          <div class="text-5xl font-bold text-white mb-4">
+            {{ currentPlayerRole?.role }}
+          </div>
+          <div class="text-xl text-purple-400 mb-6">
+            {{ currentPlayerRole?.camp }}
+          </div>
+          <div class="text-gray-400 max-w-md mx-auto">
+            <!-- On ajoutera ici la description du rôle plus tard -->
+            Description du rôle à venir...
+          </div>
         </div>
       </div>
     </div>
@@ -202,6 +224,8 @@ export default {
     const showCountdown = ref(false);
     const showLoader = ref(false);
     const rolesData = ref(null);
+    const showRoleReveal = ref(false);
+    const currentPlayerRole = ref(null);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -278,8 +302,13 @@ export default {
           clearInterval(timer);
           showCountdown.value = false;
 
-          // Si on n'a pas encore reçu les rôles, on montre le loader
-          if (!rolesData.value) {
+          if (rolesData.value) {
+            showRoleReveal.value = true;
+            // On cache la révélation après 4 secondes
+            setTimeout(() => {
+              showRoleReveal.value = false;
+            }, 4000);
+          } else {
             showLoader.value = true;
           }
         }
@@ -330,9 +359,22 @@ export default {
       socketStore.socket.on('gameStatus', ({ started, roles }) => {
         gameStarted.value = started;
         if (roles) {
-          rolesData.value = roles;
-          showLoader.value = false;  // On cache le loader si il était affiché
-          // Ici on affichera les rôles
+          console.log('Rôles attribués:', roles);
+          try {
+            // On parse la string en JSON
+            const parsedRoles = JSON.parse(roles);
+            rolesData.value = parsedRoles;
+
+            // Trouvons le rôle du joueur actuel
+            const playerData = parsedRoles.players.find(
+              player => player.pseudo === socketStore.username
+            );
+            if (playerData) {
+              currentPlayerRole.value = playerData;
+            }
+          } catch (error) {
+            console.error('Erreur lors du traitement des rôles:', error);
+          }
         }
       });
 
@@ -423,6 +465,8 @@ export default {
       showCountdown,
       showLoader,
       rolesData,
+      showRoleReveal,
+      currentPlayerRole,
     };
   },
 };
