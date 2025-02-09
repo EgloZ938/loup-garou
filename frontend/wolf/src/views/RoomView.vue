@@ -1,19 +1,12 @@
 <template>
   <div class="min-h-screen p-4">
     <!-- Modal username -->
-    <div
-      v-if="!hasUsername"
-      class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-    >
+    <div v-if="!hasUsername"
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div class="wolf-card w-full max-w-md p-6">
         <h2 class="text-2xl font-bold mb-6 text-purple-400">Qui êtes-vous ?</h2>
-        <input
-          v-model="tempUsername"
-          type="text"
-          class="wolf-input mb-4"
-          placeholder="Entrez votre nom..."
-          @keyup.enter="setUsername"
-        />
+        <input v-model="tempUsername" type="text" class="wolf-input mb-4" placeholder="Entrez votre nom..."
+          @keyup.enter="setUsername" />
         <button @click="setUsername" class="wolf-button-primary w-full">
           Rejoindre la partie
         </button>
@@ -30,33 +23,22 @@
           </h2>
           <div class="flex items-center gap-2">
             <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
-            <span class="text-purple-400 text-sm"
-              >({{ connectedUsers.length }}/16 joueurs)</span
-            >
+            <span class="text-purple-400 text-sm">({{ connectedUsers.length }}/16 joueurs)</span>
           </div>
         </div>
         <div class="flex gap-4">
           <!-- Bouton pour lancer la partie (uniquement pour le créateur) -->
-          <button
-            v-if="isRoomCreator(socketStore.username) && !gameStarted"
-            @click="startGame"
-            :disabled="connectedUsers.length < 6"
-            class="wolf-button-primary"
-            :class="{
+          <button v-if="isRoomCreator(socketStore.username) && !gameStarted" @click="startGame"
+            :disabled="connectedUsers.length < 6" class="wolf-button-primary" :class="{
               'opacity-50 cursor-not-allowed': connectedUsers.length < 6,
-            }"
-          >
+            }">
             Lancer la partie
             <span v-if="connectedUsers.length < 6" class="text-sm block">
               ({{ 6 - connectedUsers.length }} joueurs manquants)
             </span>
           </button>
 
-          <button
-            @click="copyRoomLink"
-            class="wolf-button-secondary"
-            :disabled="connectedUsers.length >= 16"
-          >
+          <button @click="copyRoomLink" class="wolf-button-secondary" :disabled="connectedUsers.length >= 16">
             Inviter
           </button>
           <button @click="leaveRoom" class="wolf-button-danger">Quitter</button>
@@ -64,10 +46,8 @@
       </div>
 
       <!-- Message d'attente -->
-      <div
-        v-if="!gameStarted && connectedUsers.length < 6"
-        class="bg-purple-900/30 border border-purple-500/30 rounded-lg p-4 mb-6 text-center"
-      >
+      <div v-if="!gameStarted && connectedUsers.length < 6"
+        class="bg-purple-900/30 border border-purple-500/30 rounded-lg p-4 mb-6 text-center">
         <p class="text-purple-300">
           En attente de plus de joueurs... (minimum 6 joueurs pour commencer)
         </p>
@@ -76,43 +56,30 @@
       <!-- Grille principale -->
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Liste des joueurs -->
-        <div
-          class="wolf-card p-6 flex flex-col relative"
-          style="height: calc(100vh - 200px)"
-        >
+        <div class="wolf-card p-6 flex flex-col relative" style="height: calc(100vh - 200px)">
           <h3 class="text-lg font-bold mb-4 text-purple-400">Villageois</h3>
           <!-- Container scrollable -->
           <div class="flex-1 overflow-y-auto pr-2">
             <div class="space-y-2">
-              <div
-                v-for="user in connectedUsers"
-                :key="user"
-                :class="[
-                  'p-3 rounded-lg flex items-center gap-3 transition-colors cursor-default',
-                  user === socketStore.username
-                    ? 'bg-purple-900/50 border border-purple-700/50'
-                    : 'bg-gray-700/50',
-                ]"
-                @contextmenu.prevent="
+              <div v-for="user in connectedUsers" :key="user" :class="[
+                'p-3 rounded-lg flex items-center gap-3 transition-colors cursor-default',
+                user === socketStore.username
+                  ? 'bg-purple-900/50 border border-purple-700/50'
+                  : 'bg-gray-700/50',
+              ]" @contextmenu.prevent="
                   isRoomCreator(socketStore.username) &&
-                  user !== socketStore.username
+                    user !== socketStore.username
                     ? showContextMenu($event, user)
                     : null
-                "
-              >
+                  ">
                 <div class="w-2 h-2 rounded-full bg-green-500"></div>
                 <div class="flex items-center gap-2 flex-1">
                   <span>{{ user }}</span>
                   <!-- Couronne pour le créateur -->
-                  <svg
-                    v-if="isRoomCreator(user)"
-                    class="w-4 h-4 text-yellow-500 shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
+                  <svg v-if="isRoomCreator(user)" class="w-4 h-4 text-yellow-500 shrink-0" viewBox="0 0 24 24"
+                    fill="currentColor">
                     <path
-                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z"
-                    />
+                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
                   </svg>
                 </div>
               </div>
@@ -120,56 +87,28 @@
           </div>
 
           <!-- Menu contextuel -->
-          <div
-            v-if="contextMenu.show"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            @click="closeContextMenu"
-          >
-            <div
-              class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 w-64"
-              @click.stop
-            >
+          <div v-if="contextMenu.show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            @click="closeContextMenu">
+            <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 w-64" @click.stop>
               <p class="text-gray-300 mb-4">
                 Que souhaitez-vous faire avec {{ contextMenu.user }} ?
               </p>
 
               <div class="space-y-2">
-                <button
-                  @click="promotePlayer(contextMenu.user)"
-                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded"
-                >
-                  <svg
-                    class="w-4 h-4 text-yellow-500"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z"
-                    />
+                <button @click="promotePlayer(contextMenu.user)"
+                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded">
+                  <svg class="w-4 h-4 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z" />
                   </svg>
                   Promouvoir
                 </button>
 
-                <button
-                  @click="kickPlayer(contextMenu.user)"
-                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded text-red-400"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"
-                    />
+                <button @click="kickPlayer(contextMenu.user)"
+                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded text-red-400">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                      d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
                   </svg>
                   Exclure
                 </button>
@@ -181,28 +120,18 @@
         </div>
 
         <!-- Chat -->
-        <div
-          class="lg:col-span-3 wolf-card flex flex-col"
-          style="height: calc(100vh - 200px)"
-        >
+        <div class="lg:col-span-3 wolf-card flex flex-col" style="height: calc(100vh - 200px)">
           <!-- Messages -->
           <div class="flex-1 p-6 overflow-y-auto space-y-4" ref="chatBox">
-            <div
-              v-for="(msg, index) in messages"
-              :key="index"
-              :class="
-                msg.type === 'system'
-                  ? 'text-purple-400 text-sm italic'
-                  : 'text-gray-300'
-              "
-            >
+            <div v-for="(msg, index) in messages" :key="index" :class="msg.type === 'system'
+                ? 'text-purple-400 text-sm italic'
+                : 'text-gray-300'
+              ">
               <template v-if="msg.type === 'system'">
                 {{ msg.content }}
               </template>
               <template v-else>
-                <span class="text-purple-400 font-medium"
-                  >{{ msg.username }}:</span
-                >
+                <span class="text-purple-400 font-medium">{{ msg.username }}:</span>
                 {{ msg.content }}
               </template>
             </div>
@@ -211,16 +140,8 @@
           <!-- Input du chat -->
           <div class="p-4 border-t border-gray-700">
             <form @submit.prevent="sendMessage" class="flex gap-3">
-              <input
-                v-model="newMessage"
-                type="text"
-                class="wolf-input flex-1"
-                placeholder="Votre message..."
-              />
-              <button
-                type="submit"
-                class="wolf-button-primary whitespace-nowrap"
-              >
+              <input v-model="newMessage" type="text" class="wolf-input flex-1" placeholder="Votre message..." />
+              <button type="submit" class="wolf-button-primary whitespace-nowrap">
                 Envoyer
               </button>
             </form>
@@ -366,8 +287,11 @@ export default {
         scrollToBottom();
       });
 
-      socketStore.socket.on("gameStatus", ({ started }) => {
+      socketStore.socket.on('gameStatus', ({ started, roles }) => {
         gameStarted.value = started;
+        if (roles) {
+          console.log('Rôles attribués:', roles);
+        }
       });
 
       socketStore.socket.on("playerKicked", ({ username }) => {

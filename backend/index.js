@@ -7,12 +7,83 @@ const io = require('socket.io')(http, {
         methods: ["GET", "POST"]
     }
 });
+require('dotenv').config();
+const OpenAI = require('openai');
 
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+});
 const MAX_PLAYERS = 16;
 const MIN_PLAYERS = 6;
 const rooms = new Map();
 const roomCreators = new Map();
 const gameStatus = new Map();
+
+// Fonction pour obtenir les rôles via OpenAI
+async function assignRoles(players) {
+    try {
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            "messages": [{
+                "role": "user",
+                "content": `Assigne des rôles du jeu Loup-Garou à ces joueurs : ${players.join(', ')}.
+
+                ### Règles générales d'équilibrage :
+                - **Le nombre de Loups-Garous doit représenter environ 1/3 des joueurs**.
+                - **Il doit toujours y avoir une Voyante** pour l'équilibre du jeu.
+                - **La Sorcière est un rôle essentiel et doit être présente dans la majorité des parties**.
+                - **Cupidon et le Salvateur doivent être uniques** (1 seul de chaque par partie).
+                - **Les rôles actifs (qui agissent la nuit) ne doivent pas être trop nombreux** pour ne pas ralentir le jeu.
+                - **Il doit rester suffisamment de Simples Villageois** pour conserver l’équilibre.
+
+                ### Liste des rôles standards :
+                
+                #### 🐺 Camp des Loups-Garous :
+                - **Loups-Garous (1/3 des joueurs, minimum 2)** : Chaque nuit, ils se concertent pour éliminer un joueur.
+                - **Infect Père des Loups (optionnel, si +8 joueurs)** : Peut transformer une victime en Loup-Garou une fois par partie.
+
+                #### 🌙 Camp des Villageois :
+                - **Voyante (obligatoire)** : Chaque nuit, elle peut espionner le rôle d'un joueur.
+                - **Sorcière (obligatoire, dès 5 joueurs)** : Possède une potion de vie pour ressusciter un joueur et une potion de mort pour en éliminer un.
+                - **Chasseur (optionnel)** : S'il est éliminé, il peut tuer un joueur de son choix avant de mourir.
+                - **Cupidon (optionnel, 1 max)** : Peut lier deux joueurs au début de la partie. Si l’un meurt, l’autre meurt aussi.
+                - **Petite Fille (optionnel)** : Peut espionner la nuit en regardant discrètement les Loups-Garous.
+                - **Salvateur (optionnel, 1 max)** : Chaque nuit, protège un joueur contre l’attaque des Loups-Garous.
+                - **Ancien (optionnel, si +8 joueurs)** : Résiste à la première attaque des Loups-Garous mais s’il meurt, les pouvoirs des autres villageois disparaissent.
+                - **Bouc Émissaire (optionnel, si +8 joueurs)** : Est automatiquement éliminé en cas d'égalité lors du vote du village.
+                - **Villageois (rôle neutre)** : Aucun pouvoir, mais vote pour éliminer les Loups-Garous.
+
+                #### 🎭 Rôles neutres (ni Villageois ni Loups-Garous) :
+                - **Joueur de Flûte (optionnel, si +8 joueurs)** : Chaque nuit, il charme des joueurs. S’il les charme tous, il gagne seul.
+                - **Renard (optionnel, si +8 joueurs)** : Peut flairer un groupe de 3 joueurs pour savoir si un Loup-Garou est présent.
+                - **Corbeau (optionnel, si +8 joueurs)** : Désigne un joueur chaque nuit qui recevra **2 votes supplémentaires** au prochain vote du village.
+
+                **IMPORTANT** :
+                - **Ne pas attribuer les rôles au hasard**, respecter l'équilibre défini ci-dessus.
+                - **Le jeu doit être jouable et stratégique**, en évitant une surcharge de rôles spéciaux.
+                - Réponds **uniquement** avec un JSON structuré ainsi :
+                {
+                "players": [
+                    {
+                    "pseudo": "nom_du_joueur",
+                    "role": "role_du_joueur",
+                    "camp": "camp_du_joueur"
+                    }
+                ]
+                }
+                Pas de texte supplémentaire, uniquement le JSON.
+                `
+            }]
+        });
+
+        const roleAssignments = completion.choices[0].message.content;
+        return roleAssignments;
+    } catch (error) {
+        console.error('Erreur OpenAI:', error);
+        return null;
+    }
+}
 
 io.on('connection', (socket) => {
     console.log('Un utilisateur s\'est connecté');
@@ -84,13 +155,25 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('startGame', (roomCode) => {
+    socket.on('startGame', async (roomCode) => {
         if (rooms.has(roomCode)) {
-            const currentPlayers = rooms.get(roomCode).size;
-            if (currentPlayers >= MIN_PLAYERS) {
-                gameStatus.set(roomCode, true);
-                io.to(roomCode).emit('gameStatus', { started: true });
-                io.to(roomCode).emit('systemMessage', 'La partie commence !');
+            const currentPlayers = Array.from(rooms.get(roomCode));
+            if (currentPlayers.length >= MIN_PLAYERS) {
+                try {
+                    const roleAssignments = await assignRoles(currentPlayers);
+                    if (roleAssignments) {
+                        console.log('Rôles attribués:', roleAssignments);
+                        gameStatus.set(roomCode, true);
+                        io.to(roomCode).emit('gameStatus', {
+                            started: true,
+                            roles: roleAssignments
+                        });
+                        io.to(roomCode).emit('systemMessage', 'La partie commence !');
+                    }
+                } catch (error) {
+                    console.error('Erreur lors de l\'attribution des rôles:', error);
+                    io.to(roomCode).emit('systemMessage', 'Erreur lors du lancement de la partie');
+                }
             }
         }
     });
