@@ -67,11 +67,11 @@
                   ? 'bg-purple-900/50 border border-purple-700/50'
                   : 'bg-gray-700/50',
               ]" @contextmenu.prevent="
-                  isRoomCreator(socketStore.username) &&
-                    user !== socketStore.username
-                    ? showContextMenu($event, user)
-                    : null
-                  ">
+                isRoomCreator(socketStore.username) &&
+                  user !== socketStore.username
+                  ? showContextMenu($event, user)
+                  : null
+                ">
                 <div class="w-2 h-2 rounded-full bg-green-500"></div>
                 <div class="flex items-center gap-2 flex-1">
                   <span>{{ user }}</span>
@@ -124,8 +124,8 @@
           <!-- Messages -->
           <div class="flex-1 p-6 overflow-y-auto space-y-4" ref="chatBox">
             <div v-for="(msg, index) in messages" :key="index" :class="msg.type === 'system'
-                ? 'text-purple-400 text-sm italic'
-                : 'text-gray-300'
+              ? 'text-purple-400 text-sm italic'
+              : 'text-gray-300'
               ">
               <template v-if="msg.type === 'system'">
                 {{ msg.content }}
@@ -146,6 +146,25 @@
               </button>
             </form>
           </div>
+        </div>
+      </div>
+
+      <!-- Décompte -->
+      <div v-if="showCountdown"
+        class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="text-center">
+          <h2 class="text-2xl font-bold mb-4 text-purple-400">La partie commence dans</h2>
+          <div class="text-8xl font-bold text-purple-400 animate-pulse">
+            {{ countdown }}
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showLoader"
+        class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="text-center">
+          <div class="w-16 h-16 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p class="text-purple-400">Attribution des rôles en cours...</p>
         </div>
       </div>
     </div>
@@ -179,6 +198,10 @@ export default {
       show: false,
       user: null,
     });
+    const countdown = ref(null);
+    const showCountdown = ref(false);
+    const showLoader = ref(false);
+    const rolesData = ref(null);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -217,11 +240,9 @@ export default {
     };
 
     const startGame = () => {
-      if (
-        connectedUsers.value.length >= 6 &&
-        isRoomCreator(socketStore.username)
-      ) {
-        socketStore.socket.emit("startGame", props.roomCode);
+      if (connectedUsers.value.length >= 6 && isRoomCreator(socketStore.username)) {
+        startCountdown();  // On démarre le décompte immédiatement
+        socketStore.socket.emit("startGame", props.roomCode);  // On demande les rôles en parallèle
       }
     };
 
@@ -244,6 +265,25 @@ export default {
       ) {
         showContextMenu(event, user);
       }
+    };
+
+
+    const startCountdown = () => {
+      showCountdown.value = true;
+      countdown.value = 5;
+
+      const timer = setInterval(() => {
+        countdown.value--;
+        if (countdown.value === 0) {
+          clearInterval(timer);
+          showCountdown.value = false;
+
+          // Si on n'a pas encore reçu les rôles, on montre le loader
+          if (!rolesData.value) {
+            showLoader.value = true;
+          }
+        }
+      }, 1000);
     };
 
     onMounted(() => {
@@ -290,7 +330,9 @@ export default {
       socketStore.socket.on('gameStatus', ({ started, roles }) => {
         gameStarted.value = started;
         if (roles) {
-          console.log('Rôles attribués:', roles);
+          rolesData.value = roles;
+          showLoader.value = false;  // On cache le loader si il était affiché
+          // Ici on affichera les rôles
         }
       });
 
@@ -377,6 +419,10 @@ export default {
       showContextMenu,
       promotePlayer,
       kickPlayer,
+      countdown,
+      showCountdown,
+      showLoader,
+      rolesData,
     };
   },
 };

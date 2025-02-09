@@ -162,7 +162,6 @@ io.on('connection', (socket) => {
                 try {
                     const roleAssignments = await assignRoles(currentPlayers);
                     if (roleAssignments) {
-                        console.log('Rôles attribués:', roleAssignments);
                         gameStatus.set(roomCode, true);
                         io.to(roomCode).emit('gameStatus', {
                             started: true,
