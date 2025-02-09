@@ -265,8 +265,7 @@ export default {
 
     const startGame = () => {
       if (connectedUsers.value.length >= 6 && isRoomCreator(socketStore.username)) {
-        startCountdown();  // On démarre le décompte immédiatement
-        socketStore.socket.emit("startGame", props.roomCode);  // On demande les rôles en parallèle
+        socketStore.socket.emit("startGame", props.roomCode);
       }
     };
 
@@ -383,6 +382,28 @@ export default {
           alert("Vous avez été exclu de la partie");
           router.push("/");
         }
+      });
+
+      socketStore.socket.on('startCountdown', () => {
+        showCountdown.value = true;
+        countdown.value = 5;
+
+        const timer = setInterval(() => {
+          countdown.value--;
+          if (countdown.value === 0) {
+            clearInterval(timer);
+            showCountdown.value = false;
+
+            if (currentPlayerRole.value) {
+              showRoleReveal.value = true;
+              setTimeout(() => {
+                showRoleReveal.value = false;
+              }, 4000);
+            } else {
+              showLoader.value = true;
+            }
+          }
+        }, 1000);
       });
     });
 

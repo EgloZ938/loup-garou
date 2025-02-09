@@ -157,6 +157,7 @@ io.on('connection', (socket) => {
         if (rooms.has(roomCode)) {
             const currentPlayers = Array.from(rooms.get(roomCode));
             if (currentPlayers.length >= MIN_PLAYERS) {
+                io.to(roomCode).emit('startCountdown');
                 try {
                     const roleAssignments = await assignRoles(currentPlayers);
                     if (roleAssignments) {
