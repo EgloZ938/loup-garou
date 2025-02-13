@@ -89,10 +89,13 @@ io.on('connection', (socket) => {
     socket.on('checkRoom', (roomCode) => {
         const roomExists = rooms.has(roomCode);
         const currentPlayers = roomExists ? rooms.get(roomCode).size : 0;
+        const usedUsernames = roomExists ? Array.from(rooms.get(roomCode)) : [];
+        
         socket.emit('roomCheck', {
             exists: roomExists,
             creator: roomExists ? roomCreators.get(roomCode) : null,
-            isFull: currentPlayers >= MAX_PLAYERS
+            isFull: currentPlayers >= MAX_PLAYERS,
+            usedUsernames: usedUsernames  // On envoie la liste des pseudos utilisés
         });
     });
 

@@ -7,6 +7,9 @@
         <h2 class="text-2xl font-bold mb-6 text-purple-400">Qui êtes-vous ?</h2>
         <input v-model="tempUsername" type="text" class="wolf-input mb-4" placeholder="Entrez votre nom..."
           @keyup.enter="setUsername" />
+        <div v-if="error" class="p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-400 text-sm mb-4">
+          {{ error }}
+        </div>
         <button @click="setUsername" class="wolf-button-primary w-full">
           Rejoindre la partie
         </button>
@@ -226,6 +229,7 @@ export default {
     const rolesData = ref(null);
     const showRoleReveal = ref(false);
     const currentPlayerRole = ref(null);
+    const error = ref("");
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -276,6 +280,15 @@ export default {
       }
     };
 
+    const handleBeforeUnload = (event) => {
+      if (socketStore.username && props.roomCode) {
+        socketStore.socket.emit("leaveRoom", {
+          username: socketStore.username,
+          room: props.roomCode,
+        });
+      }
+    };
+
     const handleContextMenu = (event, user) => {
       console.log("Click droit sur:", user);
       console.log("Username actuel:", socketStore.username);
@@ -315,6 +328,7 @@ export default {
     };
 
     onMounted(() => {
+      window.addEventListener("beforeunload", handleBeforeUnload);
       socketStore.socket.emit("checkRoom", props.roomCode);
       document.addEventListener("click", closeContextMenu);
 
@@ -408,6 +422,7 @@ export default {
     });
 
     onUnmounted(() => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       if (socketStore.username) {
         leaveRoom();
       }
@@ -421,9 +436,30 @@ export default {
 
     const setUsername = () => {
       if (!tempUsername.value) return;
-      socketStore.setUsername(tempUsername.value);
-      joinRoom();
+      error.value = '';
+
+      socketStore.socket.emit('checkRoom', props.roomCode);
+      socketStore.socket.once('roomCheck', ({ exists, isFull, usedUsernames }) => {
+        if (!exists) {
+          error.value = "Cette room n'existe pas !";
+          return;
+        }
+
+        if (isFull) {
+          error.value = "Cette room est complète !";
+          return;
+        }
+
+        if (usedUsernames.includes(tempUsername.value)) {
+          error.value = "Ce pseudo est déjà utilisé dans cette room !";
+          return;
+        }
+
+        socketStore.setUsername(tempUsername.value);
+        joinRoom();
+      });
     };
+
 
     const joinRoom = () => {
       // Configuration de l'auth
@@ -471,6 +507,7 @@ export default {
       newMessage,
       chatBox,
       socketStore,
+      error,
       gameStarted,
       contextMenu,
       setUsername,
