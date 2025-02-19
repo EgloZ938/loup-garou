@@ -27,51 +27,71 @@ async function assignRoles(players) {
             model: "gpt-4o-mini",
             "messages": [{
                 "role": "user",
-                "content": `Assigne des rôles du jeu Loup-Garou à ces joueurs : ${players.join(', ')}.
+                "content": `Assigne des rôles du jeu Loup-Garou à ces joueurs de manière TOTALEMENT ALÉATOIRE : ${players.join(', ')}.
 
+                ### Étapes d'attribution (TRÈS IMPORTANT) :
+                1. Mélange d'abord la liste des joueurs de manière aléatoire
+                2. Détermine ensuite le nombre de chaque rôle nécessaire selon les règles
+                3. Attribue les rôles aux joueurs mélangés
+                
                 ### Règles générales d'équilibrage :
                 - **Le nombre de Loups-Garous doit représenter environ 1/3 des joueurs**.
                 - **Il doit toujours y avoir une Voyante** pour l'équilibre du jeu.
                 - **La Sorcière est un rôle essentiel et doit être présente dans la majorité des parties**.
                 - **Cupidon et le Salvateur doivent être uniques** (1 seul de chaque par partie).
                 - **Les rôles actifs (qui agissent la nuit) ne doivent pas être trop nombreux** pour ne pas ralentir le jeu.
-                - **Il doit rester suffisamment de Simples Villageois** pour conserver l’équilibre.
-
-                ### Liste des rôles standards :
+                - **Il doit rester suffisamment de Simples Villageois** pour conserver l'équilibre.
                 
+                ### Liste des rôles standards :
                 #### 🐺 Camp des Loups-Garous :
-                - **Loups-Garous (1/3 des joueurs, minimum 2)** : Chaque nuit, ils se concertent pour éliminer un joueur.
+                - **Loup-Garou (1/3 des joueurs, minimum 2)** : Chaque nuit, ils se concertent pour éliminer un joueur.
                 - **Infect Père des Loups (optionnel, si +8 joueurs)** : Peut transformer une victime en Loup-Garou une fois par partie.
-
+                
                 #### 🌙 Camp des Villageois :
                 - **Voyante (obligatoire)** : Chaque nuit, elle peut espionner le rôle d'un joueur.
                 - **Sorcière (obligatoire, dès 5 joueurs)** : Possède une potion de vie pour ressusciter un joueur et une potion de mort pour en éliminer un.
                 - **Chasseur (optionnel)** : S'il est éliminé, il peut tuer un joueur de son choix avant de mourir.
-                - **Cupidon (optionnel, 1 max)** : Peut lier deux joueurs au début de la partie. Si l’un meurt, l’autre meurt aussi.
-                - **Petite Fille (optionnel)** : Peut espionner la nuit en regardant discrètement les Loups-Garous.
-                - **Salvateur (optionnel, 1 max)** : Chaque nuit, protège un joueur contre l’attaque des Loups-Garous.
-                - **Ancien (optionnel, si +8 joueurs)** : Résiste à la première attaque des Loups-Garous mais s’il meurt, les pouvoirs des autres villageois disparaissent.
+                - **Cupidon (optionnel, 1 max)** : Peut lier deux joueurs au début de la partie. Si l'un meurt, l'autre meurt aussi.
+                - **Salvateur (optionnel, 1 max)** : Chaque nuit, protège un joueur contre l'attaque des Loups-Garous.
+                - **Ancien (optionnel, si +8 joueurs)** : Résiste à la première attaque des Loups-Garous mais s'il meurt, les pouvoirs des autres villageois disparaissent.
                 - **Bouc Émissaire (optionnel, si +8 joueurs)** : Est automatiquement éliminé en cas d'égalité lors du vote du village.
                 - **Villageois (rôle neutre)** : Aucun pouvoir, mais vote pour éliminer les Loups-Garous.
-
+                
                 #### 🎭 Rôles neutres (ni Villageois ni Loups-Garous) :
-                - **Joueur de Flûte (optionnel, si +8 joueurs)** : Chaque nuit, il charme des joueurs. S’il les charme tous, il gagne seul.
+                - **Joueur de Flûte (optionnel, si +8 joueurs)** : Chaque nuit, il charme des joueurs. S'il les charme tous, il gagne seul.
                 - **Renard (optionnel, si +8 joueurs)** : Peut flairer un groupe de 3 joueurs pour savoir si un Loup-Garou est présent.
                 - **Corbeau (optionnel, si +8 joueurs)** : Désigne un joueur chaque nuit qui recevra **2 votes supplémentaires** au prochain vote du village.
+                
+                **INSTRUCTIONS CRITIQUES POUR L'ALÉATOIRE** :
+                1. Avant toute attribution, les joueurs DOIVENT être mélangés aléatoirement
+                2. L'ordre des rôles doit aussi être mélangé avant attribution
+                3. Chaque rôle doit avoir une chance égale d'être attribué à n'importe quel joueur
+                4. NE PAS suivre l'ordre de la liste des joueurs pour l'attribution
+                5. ÉVITER d'attribuer systématiquement les mêmes rôles aux mêmes positions
 
-                **IMPORTANT** :
-                - **Ne pas attribuer les rôles au hasard**, respecter l'équilibre défini ci-dessus.
-                - **Le jeu doit être jouable et stratégique**, en évitant une surcharge de rôles spéciaux.
+                ### FORMAT EXACT DES NOMS DE RÔLES (TRÈS IMPORTANT) :
+                - "Loup-Garou" (pas "Loups-Garous" ni "Loup Garou")
+                - "Infect Père des Loups" (exactement comme écrit)
+                - "Voyante"
+                - "Sorcière"
+                - "Chasseur"
+                - "Cupidon"
+                - "Salvateur"
+                - "Ancien"
+                - "Bouc Émissaire"
+                - "Villageois"
+                - "Joueur de Flûte"
+                - "Renard"
+                - "Corbeau"
 
-
-                ATTENTION: Ta réponse doit être UNIQUEMENT le JSON brut sans aucun texte avant ni après, pas de "Rôles attribués:", pas de "\`\`\`json", strictement le JSON et rien d'autre.
-                - Pour les Loups-Garous : le camp doit être "Loups-Garous"
-                - Pour les Villageois : le camp doit être "Villageois"
-                - Pour les rôles neutres : le camp doit être "Neutre"
-
-                Format exact attendu :
-                {"players":[{"pseudo":"[nom]","role":"[role]","camp":"Loups-Garous ou Villageois ou Neutre"}]}
-                `
+                Ces noms doivent être utilisés EXACTEMENT comme écrits ci-dessus dans la réponse JSON.
+                
+                Format de réponse : {"players":[{"pseudo":"[nom]","role":"[role]","camp":"Loups-Garous ou Villageois ou Neutre"}]}
+                
+                ATTENTION: Réponse UNIQUEMENT en JSON brut. Pas de texte avant/après. Pas de "Rôles attribués:", pas de "\`\`\`json".
+                - Loups-Garous : camp = "Loups-Garous"
+                - Villageois : camp = "Villageois"
+                - Rôles neutres : camp = "Neutre"`
             }]
         });
 
@@ -90,7 +110,7 @@ io.on('connection', (socket) => {
         const roomExists = rooms.has(roomCode);
         const currentPlayers = roomExists ? rooms.get(roomCode).size : 0;
         const usedUsernames = roomExists ? Array.from(rooms.get(roomCode)) : [];
-        
+
         socket.emit('roomCheck', {
             exists: roomExists,
             creator: roomExists ? roomCreators.get(roomCode) : null,

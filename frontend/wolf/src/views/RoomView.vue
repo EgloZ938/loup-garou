@@ -60,7 +60,14 @@
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Liste des joueurs -->
         <div class="wolf-card p-6 flex flex-col relative" style="height: calc(100vh - 200px)">
-          <h3 class="text-lg font-bold mb-4 text-purple-400">Villageois</h3>
+          <h3 class="text-lg font-bold mb-4" :class="{
+            'text-purple-400': !gameStarted,
+            'text-red-400': gameStarted && currentPlayerRole?.camp === 'Loups-Garous',
+            'text-blue-400': gameStarted && currentPlayerRole?.camp === 'Villageois',
+            'text-yellow-400': gameStarted && currentPlayerRole?.camp === 'Neutre'
+          }">
+            {{ gameStarted && currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
+          </h3>
           <!-- Container scrollable -->
           <div class="flex-1 overflow-y-auto pr-2">
             <div class="space-y-2">
@@ -180,6 +187,15 @@
           <h2 class="text-3xl font-bold text-purple-400">
             Vous êtes
           </h2>
+          <!-- Image du rôle -->
+          <div class="mb-4">
+            <img :src="roleDetails?.icon" :alt="currentPlayerRole?.role" class="w-32 h-32 mx-auto rounded-full border-4"
+              :class="{
+                'border-red-400': currentPlayerRole?.camp === 'Loups-Garous',
+                'border-blue-400': currentPlayerRole?.camp === 'Villageois',
+                'border-yellow-400': currentPlayerRole?.camp === 'Neutre'
+              }">
+          </div>
           <div class="text-5xl font-bold text-white mb-4">
             {{ currentPlayerRole?.role }}
           </div>
@@ -187,8 +203,7 @@
             {{ currentPlayerRole?.camp }}
           </div>
           <div class="text-gray-400 max-w-md mx-auto">
-            <!-- On ajoutera ici la description du rôle plus tard -->
-            Description du rôle à venir...
+            {{ roleDetails?.description_courte }}
           </div>
         </div>
       </div>
@@ -200,6 +215,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useSocketStore } from "../stores/socket";
+import { rolesDataJSON } from '@/data/rolesData';
 
 export default {
   props: {
@@ -326,6 +342,13 @@ export default {
         }
       }, 1000);
     };
+
+    const roleDetails = computed(() => {
+      if (currentPlayerRole.value?.role) {
+        return rolesDataJSON[currentPlayerRole.value.role];
+      }
+      return null;
+    });
 
     onMounted(() => {
       window.addEventListener("beforeunload", handleBeforeUnload);
@@ -523,6 +546,8 @@ export default {
       showCountdown,
       showLoader,
       rolesData,
+      rolesDataJSON,
+      roleDetails,
       showRoleReveal,
       currentPlayerRole,
     };

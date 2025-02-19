@@ -1,6 +1,7 @@
-export const rolesData = {
+export const rolesDataJSON = {
     "Voyante": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/voyante.png",
         "description_courte": "Chaque nuit, tu peux espionner un joueur et découvrir son rôle.",
         "description_detaillee": "Tu es la Voyante ! Chaque nuit, tu as le pouvoir de voir le rôle exact d’un joueur. Utilise cette capacité pour aider les Villageois à identifier les Loups-Garous. Mais attention, si tu parles trop, tu risques d’être leur prochaine cible !",
         "caracteristiques": {
@@ -11,6 +12,7 @@ export const rolesData = {
     },
     "Loup-Garou": {
         "camp": "Loups-Garous",
+        "icon": "/src/assets/images/roles/loup-garou.png",
         "description_courte": "Chaque nuit, tu votes avec les autres Loups-Garous pour éliminer un joueur.",
         "description_detaillee": "Tu es un Loup-Garou ! Chaque nuit, toi et tes alliés choisissez une victime parmi les Villageois. Le jour, ton but est de rester discret et de semer la confusion pour éviter d’être démasqué. Sois malin et élimine-les un par un !",
         "caracteristiques": {
@@ -21,6 +23,7 @@ export const rolesData = {
     },
     "Sorcière": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/sorciere.png",
         "description_courte": "Tu possèdes deux potions : une pour sauver, une pour tuer.",
         "description_detaillee": "Tu es la Sorcière ! Une fois par nuit, tu peux utiliser une de tes potions. L'une permet de sauver une victime des Loups-Garous, l’autre d’éliminer un joueur. Utilise-les au bon moment, car tu n’en as qu’une de chaque !",
         "caracteristiques": {
@@ -31,6 +34,7 @@ export const rolesData = {
     },
     "Cupidon": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/cupidon.png",
         "description_courte": "Au début du jeu, tu désignes deux joueurs qui tomberont amoureux.",
         "description_detaillee": "Tu es Cupidon ! Dès le début de la partie, tu choisis deux joueurs qui seront liés par l’amour. S’ils sont dans des camps opposés, ils doivent trahir les leurs pour survivre ensemble. Ton choix peut changer toute la partie !",
         "caracteristiques": {
@@ -41,6 +45,7 @@ export const rolesData = {
     },
     "Chasseur": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/chasseur.png",
         "description_courte": "Si tu meurs, tu peux immédiatement éliminer un joueur de ton choix.",
         "description_detaillee": "Tu es le Chasseur ! Si on t’élimine, tu ne partiras pas seul. Avant de mourir, tu peux choisir un joueur et l’entraîner avec toi dans la tombe. Utilise bien cette capacité pour venger ton camp !",
         "caracteristiques": {
@@ -49,18 +54,9 @@ export const rolesData = {
             "conditions_de_victoire": "Les Villageois doivent éliminer tous les Loups-Garous."
         }
     },
-    "Petite Fille": {
-        "camp": "Villageois",
-        "description_courte": "Chaque nuit, tu peux espionner discrètement les Loups-Garous.",
-        "description_detaillee": "Tu es la Petite Fille ! Tu peux observer les Loups-Garous pendant la nuit, mais attention : si tu te fais repérer, tu risques d’être leur prochaine cible !",
-        "caracteristiques": {
-            "pouvoirs": "Peut observer les Loups-Garous en pleine nuit.",
-            "actions_de_nuit": "Regarde discrètement les Loups-Garous, mais sans se faire repérer.",
-            "conditions_de_victoire": "Les Villageois doivent éliminer tous les Loups-Garous."
-        }
-    },
     "Salvateur": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/salvateur.png",
         "description_courte": "Chaque nuit, tu protèges un joueur contre l’attaque des Loups-Garous.",
         "description_detaillee": "Tu es le Salvateur ! Chaque nuit, tu peux choisir un joueur à protéger contre les attaques des Loups-Garous. Tu peux même te protéger toi-même, mais pas deux nuits de suite !",
         "caracteristiques": {
@@ -71,6 +67,7 @@ export const rolesData = {
     },
     "Joueur de Flûte": {
         "camp": "Neutre",
+        "icon": "/src/assets/images/roles/joueur-flute.png",
         "description_courte": "Chaque nuit, tu charmes des joueurs. Si tu les charmes tous, tu gagnes seul.",
         "description_detaillee": "Tu es le Joueur de Flûte ! Chaque nuit, tu peux ensorceler des joueurs. Si à un moment donné tous les joueurs restants sont charmés, tu gagnes immédiatement la partie ! Mais attention, si tu te fais repérer, ils ne te laisseront pas faire...",
         "caracteristiques": {
@@ -81,6 +78,7 @@ export const rolesData = {
     },
     "Renard": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/renard.png",
         "description_courte": "Tu peux flairer un groupe de 3 joueurs pour savoir si un Loup-Garou est présent.",
         "description_detaillee": "Tu es le Renard ! Chaque nuit, tu peux sentir si un Loup-Garou est caché parmi trois joueurs de ton choix. Si aucun Loup n’est détecté, tu perds ton pouvoir !",
         "caracteristiques": {
@@ -91,6 +89,7 @@ export const rolesData = {
     },
     "Infect Père des Loups": {
         "camp": "Loups-Garous",
+        "icon": "/src/assets/images/roles/infect-pere.png",
         "description_courte": "Une fois dans la partie, tu peux transformer une victime en Loup-Garou.",
         "description_detaillee": "Tu es l'Infect Père des Loups ! Une seule fois dans la partie, après une attaque nocturne réussie des Loups-Garous, tu peux décider d'infecter la victime et la faire rejoindre votre camp. Choisis bien ton moment, car c'est ton seul pouvoir !",
         "caracteristiques": {
@@ -101,6 +100,7 @@ export const rolesData = {
     },
     "Ancien": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/ancien.png",
         "description_courte": "Tu résistes à la première attaque des Loups-Garous, mais ta mort affaiblit les Villageois.",
         "description_detaillee": "Tu es l'Ancien ! Si les Loups-Garous t'attaquent, tu résistes et restes en vie. Mais attention : si tu es éliminé par le village ou par la Sorcière, tous les rôles spéciaux des Villageois disparaissent !",
         "caracteristiques": {
@@ -111,6 +111,7 @@ export const rolesData = {
     },
     "Bouc Émissaire": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/bouc-emissaire.png",
         "description_courte": "Si le vote du village est une égalité, c'est toi qui meurs à leur place.",
         "description_detaillee": "Tu es le Bouc Émissaire ! Si le village ne parvient pas à départager un vote et que c'est une égalité, c'est toi qui sera automatiquement éliminé. Et pire encore, au tour suivant, tu choisis qui ne pourra pas voter !",
         "caracteristiques": {
@@ -121,6 +122,7 @@ export const rolesData = {
     },
     "Villageois": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/villageois.png",
         "description_courte": "Tu n’as aucun pouvoir spécial, mais ton vote est crucial.",
         "description_detaillee": "Tu es un simple Villageois. Ton rôle est d'observer, de débattre et de voter intelligemment pour éliminer les Loups-Garous. Attention aux manipulations, ton instinct est ta meilleure arme !",
         "caracteristiques": {
@@ -131,6 +133,7 @@ export const rolesData = {
     },
     "Corbeau": {
         "camp": "Villageois",
+        "icon": "/src/assets/images/roles/corbeau.png",
         "description_courte": "Chaque nuit, tu accuses un joueur qui recevra 2 votes contre lui au prochain conseil.",
         "description_detaillee": "Tu es le Corbeau ! Chaque nuit, tu peux désigner un joueur qui recevra automatiquement 2 votes supplémentaires au prochain vote du village. Utilise ce pouvoir pour orienter les débats… ou semer la discorde !",
         "caracteristiques": {
