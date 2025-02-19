@@ -56,11 +56,11 @@ async function assignRoles(players) {
                 - **Ancien (optionnel, si +8 joueurs)** : Résiste à la première attaque des Loups-Garous mais s'il meurt, les pouvoirs des autres villageois disparaissent.
                 - **Bouc Émissaire (optionnel, si +8 joueurs)** : Est automatiquement éliminé en cas d'égalité lors du vote du village.
                 - **Villageois (rôle neutre)** : Aucun pouvoir, mais vote pour éliminer les Loups-Garous.
+                - **Renard (optionnel, si +8 joueurs)** : Peut flairer un groupe de 3 joueurs pour savoir si un Loup-Garou est présent.
+                - **Corbeau (optionnel, si +8 joueurs)** : Désigne un joueur chaque nuit qui recevra **2 votes supplémentaires** au prochain vote du village.
                 
                 #### 🎭 Rôles neutres (ni Villageois ni Loups-Garous) :
                 - **Joueur de Flûte (optionnel, si +8 joueurs)** : Chaque nuit, il charme des joueurs. S'il les charme tous, il gagne seul.
-                - **Renard (optionnel, si +8 joueurs)** : Peut flairer un groupe de 3 joueurs pour savoir si un Loup-Garou est présent.
-                - **Corbeau (optionnel, si +8 joueurs)** : Désigne un joueur chaque nuit qui recevra **2 votes supplémentaires** au prochain vote du village.
                 
                 **INSTRUCTIONS CRITIQUES POUR L'ALÉATOIRE** :
                 1. Avant toute attribution, les joueurs DOIVENT être mélangés aléatoirement
