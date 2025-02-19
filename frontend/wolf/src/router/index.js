@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import RoomView from '../views/RoomView.vue'
+import RolesView from '../views/RolesView.vue'
+import RoleDetailView from '../views/RoleDetailView.vue'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -15,7 +17,19 @@ const router = createRouter({
             name: 'room',
             component: RoomView,
             props: true
+        },
+        {
+            path: '/roles',
+            name: 'roles',
+            component: RolesView
+        },
+        {
+            path: '/roles/:role',
+            name: 'role-detail',
+            component: RoleDetailView,
+            props: true
         }
+
     ]
 })
 
