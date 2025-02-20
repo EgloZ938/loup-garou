@@ -30,9 +30,9 @@
     </div>
 
     <!-- Contenu principal -->
-    <div v-else class="max-w-6xl mx-auto p-6">
+    <div v-else class="max-w-6xl mx-auto p-6 h-screen flex flex-col">
       <!-- En-tête -->
-      <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-6 mb-6">
+      <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-6">
         <div class="flex justify-between items-center">
           <div>
             <h2 class="text-2xl font-bold text-purple-400">
@@ -68,18 +68,17 @@
 
       <!-- Message d'attente -->
       <div v-if="!gameStarted && connectedUsers.length < 6"
-        class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-4 mb-6 text-center">
-        <p class="text-purple-300">
+        class="backdrop-blur-sm bg-indigo-900/10 border border-indigo-500/20 rounded-xl p-4 mt-6 text-center">
+        <p class="text-indigo-300">
           En attente de plus de joueurs... (minimum 6 joueurs pour commencer)
         </p>
       </div>
 
       <!-- Grille principale -->
-      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6 min-h-0">
         <!-- Liste des joueurs -->
-        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 p-6 flex flex-col relative rounded-xl"
-          style="height: calc(100vh - 200px)">
-          <h3 class="text-lg font-bold mb-4" :class="{
+        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 p-6 flex flex-col rounded-xl min-h-0">
+          <h3 class="text-lg font-bold mb-4 flex-shrink-0" :class="{
             'text-purple-400': !gameStarted,
             'text-red-400': gameStarted && currentPlayerRole?.camp === 'Loups-Garous',
             'text-blue-400': gameStarted && currentPlayerRole?.camp === 'Villageois',
@@ -89,7 +88,7 @@
           </h3>
 
           <!-- Container scrollable pour les joueurs -->
-          <div class="flex-1 overflow-y-auto pr-2">
+          <div class="flex-1 overflow-y-auto pr-2 min-h-0">
             <div class="space-y-2">
               <div v-for="user in connectedUsers" :key="user" :class="[
                 'p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-purple-900/30',
@@ -150,10 +149,9 @@
 
         <!-- Chat -->
         <div
-          class="lg:col-span-3 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 flex flex-col rounded-xl"
-          style="height: calc(100vh - 200px)">
+          class="lg:col-span-3 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 flex flex-col rounded-xl min-h-0">
           <!-- Messages -->
-          <div class="flex-1 p-6 overflow-y-auto space-y-4" ref="chatBox">
+          <div class="flex-1 p-6 overflow-y-auto space-y-4 min-h-0" ref="chatBox">
             <div v-for="(msg, index) in messages" :key="index" :class="msg.type === 'system'
               ? 'text-purple-400 text-sm italic'
               : 'text-gray-300'">
@@ -168,7 +166,7 @@
           </div>
 
           <!-- Input du chat -->
-          <div class="p-4 border-t border-purple-500/20">
+          <div class="p-4 border-t border-purple-500/20 flex-shrink-0">
             <form @submit.prevent="sendMessage" class="flex gap-3">
               <input v-model="newMessage" type="text" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 placeholder-gray-500
                  focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500
@@ -185,11 +183,10 @@
       <!-- Décompte -->
       <div v-if="showCountdown"
         class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div
-          class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-8 transform scale-100 opacity-100 transition-all duration-500">
-          <h2 class="text-2xl font-bold mb-6 text-purple-400">La partie commence dans</h2>
+        <div class="text-center transform scale-100 opacity-100 transition-all duration-500">
+          <h2 class="text-2xl font-bold mb-8 text-purple-400">La partie commence dans</h2>
           <div
-            class="text-8xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent animate-pulse">
+            class="text-9xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent animate-pulse">
             {{ countdown }}
           </div>
         </div>
@@ -210,8 +207,7 @@
       <!-- Révélation du rôle -->
       <div v-if="showRoleReveal"
         class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-8 max-w-lg w-full
-            text-center space-y-6 transform transition-all duration-700 ease-out"
+        <div class="max-w-lg w-full text-center space-y-8 transform transition-all duration-700 ease-out"
           :class="{ 'translate-y-0 opacity-100': showRoleReveal, 'translate-y-10 opacity-0': !showRoleReveal }">
           <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
             Vous êtes
@@ -223,10 +219,9 @@
               'bg-red-500/20 animate-pulse': currentPlayerRole?.camp === 'Loups-Garous',
               'bg-blue-500/20 animate-pulse': currentPlayerRole?.camp === 'Villageois',
               'bg-yellow-500/20 animate-pulse': currentPlayerRole?.camp === 'Neutre'
-            }">
-            </div>
+            }"></div>
             <img :src="roleDetails?.icon" :alt="currentPlayerRole?.role"
-              class="w-32 h-32 mx-auto rounded-full border-4 relative transform hover:scale-105 transition-transform duration-300"
+              class="w-40 h-40 mx-auto rounded-full border-4 relative transform hover:scale-105 transition-transform duration-300"
               :class="{
                 'border-red-400': currentPlayerRole?.camp === 'Loups-Garous',
                 'border-blue-400': currentPlayerRole?.camp === 'Villageois',
@@ -234,7 +229,7 @@
               }">
           </div>
 
-          <div class="text-5xl font-bold mb-4" :class="{
+          <div class="text-6xl font-bold" :class="{
             'text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
             'text-blue-400': currentPlayerRole?.camp === 'Villageois',
             'text-yellow-400': currentPlayerRole?.camp === 'Neutre'
@@ -242,7 +237,7 @@
             {{ currentPlayerRole?.role }}
           </div>
 
-          <div class="px-4 py-2 rounded-full inline-block" :class="{
+          <div class="px-6 py-3 rounded-full inline-block" :class="{
             'bg-red-500/10 text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
             'bg-blue-500/10 text-blue-400': currentPlayerRole?.camp === 'Villageois',
             'bg-yellow-500/10 text-yellow-400': currentPlayerRole?.camp === 'Neutre'
@@ -250,8 +245,7 @@
             {{ currentPlayerRole?.camp }}
           </div>
 
-          <div
-            class="text-gray-300 max-w-md mx-auto p-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-lg">
+          <div class="text-gray-300 max-w-md mx-auto">
             {{ roleDetails?.description_courte }}
           </div>
         </div>
