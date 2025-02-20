@@ -1,56 +1,74 @@
 <template>
-  <div class="min-h-screen p-4">
+  <!-- Container principal avec fond et particules -->
+  <div class="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 relative overflow-hidden">
+    <!-- Particules/étoiles en arrière-plan -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div v-for="i in 20" :key="i" class="absolute w-1 h-1 bg-purple-400/20 rounded-full animate-twinkle" :style="{
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        animationDelay: `${Math.random() * 3}s`
+      }">
+      </div>
+    </div>
+
     <!-- Modal username -->
     <div v-if="!hasUsername"
       class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div class="wolf-card w-full max-w-md p-6">
+      <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 w-full max-w-md p-6 rounded-xl">
         <h2 class="text-2xl font-bold mb-6 text-purple-400">Qui êtes-vous ?</h2>
-        <input v-model="tempUsername" type="text" class="wolf-input mb-4" placeholder="Entrez votre nom..."
-          @keyup.enter="setUsername" />
+        <input v-model="tempUsername" type="text" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 placeholder-gray-500
+                 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500
+                 transition-colors mb-4" placeholder="Entrez votre nom..." @keyup.enter="setUsername" />
         <div v-if="error" class="p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-400 text-sm mb-4">
           {{ error }}
         </div>
-        <button @click="setUsername" class="wolf-button-primary w-full">
+        <button @click="setUsername"
+          class="wolf-button-primary w-full hover:scale-105 transition-transform duration-300">
           Rejoindre la partie
         </button>
       </div>
     </div>
 
     <!-- Contenu principal -->
-    <div v-else class="max-w-6xl mx-auto">
+    <div v-else class="max-w-6xl mx-auto p-6">
       <!-- En-tête -->
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h2 class="text-2xl font-bold text-purple-400">
-            Room: <span class="text-gray-300">{{ roomCode }}</span>
-          </h2>
-          <div class="flex items-center gap-2">
-            <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
-            <span class="text-purple-400 text-sm">({{ connectedUsers.length }}/16 joueurs)</span>
+      <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-6 mb-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-bold text-purple-400">
+              Room: <span class="text-gray-300">{{ roomCode }}</span>
+            </h2>
+            <div class="flex items-center gap-2">
+              <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
+              <span class="text-purple-400 text-sm">({{ connectedUsers.length }}/16 joueurs)</span>
+            </div>
           </div>
-        </div>
-        <div class="flex gap-4">
-          <!-- Bouton pour lancer la partie (uniquement pour le créateur) -->
-          <button v-if="isRoomCreator(socketStore.username) && !gameStarted" @click="startGame"
-            :disabled="connectedUsers.length < 6" class="wolf-button-primary" :class="{
-              'opacity-50 cursor-not-allowed': connectedUsers.length < 6,
-            }">
-            Lancer la partie
-            <span v-if="connectedUsers.length < 6" class="text-sm block">
-              ({{ 6 - connectedUsers.length }} joueurs manquants)
-            </span>
-          </button>
+          <div class="flex gap-4">
+            <button v-if="isRoomCreator(socketStore.username) && !gameStarted" @click="startGame"
+              :disabled="connectedUsers.length < 6"
+              class="wolf-button-primary hover:scale-105 transition-transform duration-300"
+              :class="{ 'opacity-50 cursor-not-allowed': connectedUsers.length < 6 }">
+              Lancer la partie
+              <span v-if="connectedUsers.length < 6" class="text-sm block">
+                ({{ 6 - connectedUsers.length }} joueurs manquants)
+              </span>
+            </button>
 
-          <button @click="copyRoomLink" class="wolf-button-secondary" :disabled="connectedUsers.length >= 16">
-            Inviter
-          </button>
-          <button @click="leaveRoom" class="wolf-button-danger">Quitter</button>
+            <button @click="copyRoomLink"
+              class="wolf-button-secondary hover:scale-105 transition-transform duration-300"
+              :disabled="connectedUsers.length >= 16">
+              Inviter
+            </button>
+            <button @click="leaveRoom" class="wolf-button-danger hover:scale-105 transition-transform duration-300">
+              Quitter
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Message d'attente -->
       <div v-if="!gameStarted && connectedUsers.length < 6"
-        class="bg-purple-900/30 border border-purple-500/30 rounded-lg p-4 mb-6 text-center">
+        class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-4 mb-6 text-center">
         <p class="text-purple-300">
           En attente de plus de joueurs... (minimum 6 joueurs pour commencer)
         </p>
@@ -59,7 +77,8 @@
       <!-- Grille principale -->
       <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Liste des joueurs -->
-        <div class="wolf-card p-6 flex flex-col relative" style="height: calc(100vh - 200px)">
+        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 p-6 flex flex-col relative rounded-xl"
+          style="height: calc(100vh - 200px)">
           <h3 class="text-lg font-bold mb-4" :class="{
             'text-purple-400': !gameStarted,
             'text-red-400': gameStarted && currentPlayerRole?.camp === 'Loups-Garous',
@@ -68,26 +87,27 @@
           }">
             {{ gameStarted && currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
           </h3>
-          <!-- Container scrollable -->
+
+          <!-- Container scrollable pour les joueurs -->
           <div class="flex-1 overflow-y-auto pr-2">
             <div class="space-y-2">
               <div v-for="user in connectedUsers" :key="user" :class="[
-                'p-3 rounded-lg flex items-center gap-3 transition-colors cursor-default',
+                'p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-purple-900/30',
                 user === socketStore.username
-                  ? 'bg-purple-900/50 border border-purple-700/50'
-                  : 'bg-gray-700/50',
+                  ? 'backdrop-blur-sm bg-purple-900/20 border border-purple-500/20'
+                  : 'backdrop-blur-sm bg-gray-800/10 border border-gray-700/20'
               ]" @contextmenu.prevent="
                 isRoomCreator(socketStore.username) &&
                   user !== socketStore.username
                   ? showContextMenu($event, user)
                   : null
                 ">
-                <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                 <div class="flex items-center gap-2 flex-1">
-                  <span>{{ user }}</span>
+                  <span class="text-gray-300">{{ user }}</span>
                   <!-- Couronne pour le créateur -->
-                  <svg v-if="isRoomCreator(user)" class="w-4 h-4 text-yellow-500 shrink-0" viewBox="0 0 24 24"
-                    fill="currentColor">
+                  <svg v-if="isRoomCreator(user)" class="w-4 h-4 text-yellow-500 shrink-0 animate-pulse"
+                    viewBox="0 0 24 24" fill="currentColor">
                     <path
                       d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
                   </svg>
@@ -97,61 +117,64 @@
           </div>
 
           <!-- Menu contextuel -->
-          <div v-if="contextMenu.show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          <div v-if="contextMenu.show"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
             @click="closeContextMenu">
-            <div class="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4 w-64" @click.stop>
+            <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-4 w-64" @click.stop>
               <p class="text-gray-300 mb-4">
                 Que souhaitez-vous faire avec {{ contextMenu.user }} ?
               </p>
 
               <div class="space-y-2">
                 <button @click="promotePlayer(contextMenu.user)"
-                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded">
+                  class="w-full px-4 py-2 text-left hover:bg-purple-900/30 flex items-center gap-2 rounded-lg transition-colors">
                   <svg class="w-4 h-4 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                       d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z" />
                   </svg>
-                  Promouvoir
+                  <span class="text-gray-300">Promouvoir</span>
                 </button>
 
                 <button @click="kickPlayer(contextMenu.user)"
-                  class="w-full px-4 py-2 text-left hover:bg-gray-700 flex items-center gap-2 rounded text-red-400">
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  class="w-full px-4 py-2 text-left hover:bg-red-900/30 flex items-center gap-2 rounded-lg transition-colors">
+                  <svg class="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                       d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
                   </svg>
-                  Exclure
+                  <span class="text-red-400">Exclure</span>
                 </button>
               </div>
             </div>
           </div>
-
-          <!-- Fermeture du div de la liste des joueurs -->
         </div>
 
         <!-- Chat -->
-        <div class="lg:col-span-3 wolf-card flex flex-col" style="height: calc(100vh - 200px)">
+        <div
+          class="lg:col-span-3 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 flex flex-col rounded-xl"
+          style="height: calc(100vh - 200px)">
           <!-- Messages -->
           <div class="flex-1 p-6 overflow-y-auto space-y-4" ref="chatBox">
             <div v-for="(msg, index) in messages" :key="index" :class="msg.type === 'system'
               ? 'text-purple-400 text-sm italic'
-              : 'text-gray-300'
-              ">
+              : 'text-gray-300'">
               <template v-if="msg.type === 'system'">
                 {{ msg.content }}
               </template>
               <template v-else>
-                <span class="text-purple-400 font-medium">{{ msg.username }}:</span>
-                {{ msg.content }}
+                <span class="text-purple-400 font-medium">{{ msg.username }} : </span>
+                <span class="text-gray-300">{{ msg.content }}</span>
               </template>
             </div>
           </div>
 
           <!-- Input du chat -->
-          <div class="p-4 border-t border-gray-700">
+          <div class="p-4 border-t border-purple-500/20">
             <form @submit.prevent="sendMessage" class="flex gap-3">
-              <input v-model="newMessage" type="text" class="wolf-input flex-1" placeholder="Votre message..." />
-              <button type="submit" class="wolf-button-primary whitespace-nowrap">
+              <input v-model="newMessage" type="text" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 placeholder-gray-500
+                 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500
+                 transition-colors" placeholder="Votre message..." />
+              <button type="submit"
+                class="wolf-button-primary whitespace-nowrap hover:scale-105 transition-transform duration-300">
                 Envoyer
               </button>
             </form>
@@ -162,47 +185,73 @@
       <!-- Décompte -->
       <div v-if="showCountdown"
         class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="text-center">
-          <h2 class="text-2xl font-bold mb-4 text-purple-400">La partie commence dans</h2>
-          <div class="text-8xl font-bold text-purple-400 animate-pulse">
+        <div
+          class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-8 transform scale-100 opacity-100 transition-all duration-500">
+          <h2 class="text-2xl font-bold mb-6 text-purple-400">La partie commence dans</h2>
+          <div
+            class="text-8xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent animate-pulse">
             {{ countdown }}
           </div>
         </div>
       </div>
 
-      <!-- Loader-->
+      <!-- Loader -->
       <div v-if="showLoader"
         class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="text-center">
-          <div class="w-16 h-16 border-4 border-purple-400 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p class="text-purple-400">Attribution des rôles en cours...</p>
+        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-8 text-center">
+          <div class="relative w-16 h-16 mx-auto mb-4">
+            <div class="absolute inset-0 border-4 border-purple-400/20 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-t-purple-400 rounded-full animate-spin"></div>
+          </div>
+          <p class="text-purple-400 text-lg">Attribution des rôles en cours...</p>
         </div>
       </div>
 
       <!-- Révélation du rôle -->
       <div v-if="showRoleReveal"
         class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="text-center space-y-6 transform transition-all duration-700 ease-out"
+        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-8 max-w-lg w-full
+            text-center space-y-6 transform transition-all duration-700 ease-out"
           :class="{ 'translate-y-0 opacity-100': showRoleReveal, 'translate-y-10 opacity-0': !showRoleReveal }">
-          <h2 class="text-3xl font-bold text-purple-400">
+          <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
             Vous êtes
           </h2>
+
           <!-- Image du rôle -->
-          <div class="mb-4">
-            <img :src="roleDetails?.icon" :alt="currentPlayerRole?.role" class="w-32 h-32 mx-auto rounded-full border-4"
+          <div class="relative inline-block">
+            <div class="absolute -inset-2 rounded-full opacity-50" :class="{
+              'bg-red-500/20 animate-pulse': currentPlayerRole?.camp === 'Loups-Garous',
+              'bg-blue-500/20 animate-pulse': currentPlayerRole?.camp === 'Villageois',
+              'bg-yellow-500/20 animate-pulse': currentPlayerRole?.camp === 'Neutre'
+            }">
+            </div>
+            <img :src="roleDetails?.icon" :alt="currentPlayerRole?.role"
+              class="w-32 h-32 mx-auto rounded-full border-4 relative transform hover:scale-105 transition-transform duration-300"
               :class="{
                 'border-red-400': currentPlayerRole?.camp === 'Loups-Garous',
                 'border-blue-400': currentPlayerRole?.camp === 'Villageois',
                 'border-yellow-400': currentPlayerRole?.camp === 'Neutre'
               }">
           </div>
-          <div class="text-5xl font-bold text-white mb-4">
+
+          <div class="text-5xl font-bold mb-4" :class="{
+            'text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
+            'text-blue-400': currentPlayerRole?.camp === 'Villageois',
+            'text-yellow-400': currentPlayerRole?.camp === 'Neutre'
+          }">
             {{ currentPlayerRole?.role }}
           </div>
-          <div class="text-xl text-purple-400 mb-6">
+
+          <div class="px-4 py-2 rounded-full inline-block" :class="{
+            'bg-red-500/10 text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
+            'bg-blue-500/10 text-blue-400': currentPlayerRole?.camp === 'Villageois',
+            'bg-yellow-500/10 text-yellow-400': currentPlayerRole?.camp === 'Neutre'
+          }">
             {{ currentPlayerRole?.camp }}
           </div>
-          <div class="text-gray-400 max-w-md mx-auto">
+
+          <div
+            class="text-gray-300 max-w-md mx-auto p-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-lg">
             {{ roleDetails?.description_courte }}
           </div>
         </div>
