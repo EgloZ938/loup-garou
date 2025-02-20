@@ -62,12 +62,6 @@ async function assignRoles(players) {
                 #### 🎭 Rôles neutres (ni Villageois ni Loups-Garous) :
                 - **Joueur de Flûte (optionnel, si +8 joueurs)** : Chaque nuit, il charme des joueurs. S'il les charme tous, il gagne seul.
                 
-                **INSTRUCTIONS CRITIQUES POUR L'ALÉATOIRE** :
-                1. Avant toute attribution, les joueurs DOIVENT être mélangés aléatoirement
-                2. L'ordre des rôles doit aussi être mélangé avant attribution
-                3. Chaque rôle doit avoir une chance égale d'être attribué à n'importe quel joueur
-                4. NE PAS suivre l'ordre de la liste des joueurs pour l'attribution
-                5. ÉVITER d'attribuer systématiquement les mêmes rôles aux mêmes positions
 
                 ### FORMAT EXACT DES NOMS DE RÔLES (TRÈS IMPORTANT) :
                 - "Loup-Garou" (pas "Loups-Garous" ni "Loup Garou")
