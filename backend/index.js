@@ -29,13 +29,13 @@ async function assignRoles(players) {
                 "role": "user",
                 "content": `Assigne des rôles du jeu Loup-Garou à ces joueurs de manière TOTALEMENT ALÉATOIRE : ${players.join(', ')}.
 
-                ### Étapes d'attribution (TRÈS IMPORTANT) :
-                1. Mélange d'abord la liste des joueurs de manière aléatoire
-                2. Détermine ensuite le nombre de chaque rôle nécessaire selon les règles
-                3. Attribue les rôles aux joueurs mélangés
+                ### RÈGLES CRITIQUES DE VALIDATION :
+                - La réponse DOIT contenir EXACTEMENT ${players.length} joueurs, ni plus ni moins
+                - Chaque joueur de la liste DOIT recevoir un rôle
+                - Vérifier que TOUS les pseudos de la liste initiale sont présents dans la réponse
                 
                 ### Règles générales d'équilibrage :
-                - **Le nombre de Loups-Garous doit représenter environ 1/3 des joueurs**.
+                - **Le nombre de Loups-Garous doit représenter environ 1/3 des joueurs MINIMUM 2**.
                 - **Il doit toujours y avoir une Voyante** pour l'équilibre du jeu.
                 - **La Sorcière est un rôle essentiel et doit être présente dans la majorité des parties**.
                 - **Cupidon et le Salvateur doivent être uniques** (1 seul de chaque par partie).
@@ -44,7 +44,7 @@ async function assignRoles(players) {
                 
                 ### Liste des rôles standards :
                 #### 🐺 Camp des Loups-Garous :
-                - **Loup-Garou (1/3 des joueurs, minimum 2)** : Chaque nuit, ils se concertent pour éliminer un joueur.
+                - **Loup-Garou (1/3 des joueurs, MINIMUM 2)** : Chaque nuit, ils se concertent pour éliminer un joueur.
                 - **Infect Père des Loups (optionnel, si +8 joueurs)** : Peut transformer une victime en Loup-Garou une fois par partie.
                 
                 #### 🌙 Camp des Villageois :

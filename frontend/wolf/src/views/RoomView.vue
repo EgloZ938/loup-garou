@@ -78,14 +78,28 @@
       <div class="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6 min-h-0">
         <!-- Liste des joueurs -->
         <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 p-6 flex flex-col rounded-xl min-h-0">
-          <h3 class="text-lg font-bold mb-4 flex-shrink-0" :class="{
-            'text-purple-400': !gameStarted,
-            'text-red-400': gameStarted && currentPlayerRole?.camp === 'Loups-Garous',
-            'text-blue-400': gameStarted && currentPlayerRole?.camp === 'Villageois',
-            'text-yellow-400': gameStarted && currentPlayerRole?.camp === 'Neutre'
-          }">
-            {{ gameStarted && currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
-          </h3>
+          <div class="flex items-center gap-2 mb-4 flex-shrink-0">
+            <h3 class="text-lg font-bold flex-shrink-0" :class="{
+              'text-purple-400': !gameStarted,
+              'text-red-400': gameStarted && currentPlayerRole?.camp === 'Loups-Garous',
+              'text-blue-400': gameStarted && currentPlayerRole?.camp === 'Villageois',
+              'text-yellow-400': gameStarted && currentPlayerRole?.camp === 'Neutre'
+            }">
+              {{ gameStarted && currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
+            </h3>
+            <button v-if="gameStarted && currentPlayerRole" @click="showRoleModal = true"
+              class="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-purple-500/20"
+              :class="{
+                'text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
+                'text-blue-400': currentPlayerRole?.camp === 'Villageois',
+                'text-yellow-400': currentPlayerRole?.camp === 'Neutre'
+              }">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" />
+              </svg>
+            </button>
+          </div>
 
           <!-- Container scrollable pour les joueurs -->
           <div class="flex-1 overflow-y-auto pr-2 min-h-0">
@@ -251,6 +265,10 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de détail du rôle -->
+    <RoleDetailModal v-if="showRoleModal" :show="showRoleModal" :role-name="currentPlayerRole?.role" :role="roleDetails"
+      @close="showRoleModal = false" />
   </div>
 </template>
 
@@ -259,8 +277,12 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useSocketStore } from "../stores/socket";
 import { rolesDataJSON } from '@/data/rolesData';
+import RoleDetailModal from '@/components/RoleDetailModal.vue';
 
 export default {
+  components: {
+    RoleDetailModal
+  },
   props: {
     roomCode: {
       type: String,
@@ -289,6 +311,7 @@ export default {
     const showRoleReveal = ref(false);
     const currentPlayerRole = ref(null);
     const error = ref("");
+    const showRoleModal = ref(false);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -593,6 +616,7 @@ export default {
       roleDetails,
       showRoleReveal,
       currentPlayerRole,
+      showRoleModal,
     };
   },
 };
