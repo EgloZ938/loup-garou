@@ -14,14 +14,46 @@
       <div class="w-full max-w-md opacity-0 animate-fade-in">
         <!-- Titre et logo -->
         <div class="text-center mb-8">
-          <div class="mb-4 relative w-24 h-24 mx-auto">
-            <div class="absolute inset-0 bg-purple-500/20 rounded-full animate-pulse"></div>
+          <div class="mb-4 relative w-40 h-40 mx-auto group">
+            <!-- Effet d'ombre violette - Ajout d'une transition -->
+            <div
+              class="absolute inset-0 bg-purple-900/20 rounded-full animate-pulse transition-all duration-300 group-hover:bg-purple-600/30">
+            </div>
+
             <svg xmlns="http://www.w3.org/2000/svg"
-              class="h-full w-full text-purple-400 transform hover:scale-110 transition-transform duration-300"
+              class="relative h-full w-full text-purple-300 transition-all duration-300 group-hover:text-purple-200"
               viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                d="M21 11c0 5.5-4.5 10-10 10S1 16.5 1 11m20 0c0-1.7-.3-3.3-.9-4.7C18.7 3.5 16 1 12 1S5.3 3.5 3.9 6.3C3.3 7.7 3 9.3 3 11m18 0H3m9-4v8m0-8l4 4m-4-4l-4 4" />
+              <!-- Oreilles pointues -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 9L2 3L8 6M19 9L22 3L16 6"
+                class="text-purple-400 transition-colors duration-300 group-hover:text-purple-300" />
+
+              <!-- Tête plus agressive -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 21C7 21 3 17 3 12C3 7 7 4 12 4C17 4 21 7 21 12C21 17 17 21 12 21Z" />
+
+              <!-- Yeux violets lumineux avec animation -->
+              <circle cx="9" cy="10" r="1.2"
+                class="fill-purple-400 transition-colors duration-300 group-hover:fill-purple-200 animate-blink" />
+              <circle cx="15" cy="10" r="1.2"
+                class="fill-purple-400 transition-colors duration-300 group-hover:fill-purple-200 animate-blink" />
+
+              <!-- Museau plus bestial avec animation -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 13L11 15.5L12 17L13 15.5L12 13Z" class="animate-snarl" />
+
+              <!-- Crocs plus menaçants avec animation -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 15L8.5 17.5M14 15L15.5 17.5"
+                class="text-purple-200 animate-growl" />
+
+              <!-- Cicatrices -->
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 8L10 9M16 8L14 9"
+                class="text-purple-500 transition-colors duration-300 group-hover:text-purple-300" />
             </svg>
+
+            <!-- Ombre violette portée - Intensifiée au hover -->
+            <div
+              class="absolute -inset-1 bg-purple-900/30 blur-sm -z-10 rounded-full transition-all duration-300 group-hover:bg-purple-600/40 group-hover:blur-md">
+            </div>
           </div>
           <h1 class="text-4xl font-bold mb-2 text-purple-400">Loup-Garou</h1>
           <p class="text-gray-400">Rejoignez la partie et survivez à la nuit...</p>
@@ -175,5 +207,79 @@ export default {
   50% {
     opacity: 1;
   }
+}
+
+/* Animation des yeux qui clignent */
+@keyframes blink {
+
+  0%,
+  95% {
+    transform: scaleY(1);
+  }
+
+  97% {
+    transform: scaleY(0.1);
+  }
+
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-blink {
+  animation: blink 4s infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Animation du museau qui grogne */
+@keyframes snarl {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(0.5px);
+  }
+}
+
+.animate-snarl {
+  animation: snarl 2s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Animation des crocs qui bougent */
+@keyframes growl {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(0.3px) translateX(0.2px);
+  }
+}
+
+.animate-growl {
+  animation: growl 2s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+
+/* Ajout d'une animation spéciale au survol */
+.group:hover .animate-blink {
+  animation: blink 1s infinite;
+}
+
+.group:hover .animate-snarl {
+  animation: snarl 0.5s ease-in-out infinite;
+}
+
+.group:hover .animate-growl {
+  animation: growl 0.5s ease-in-out infinite;
 }
 </style>

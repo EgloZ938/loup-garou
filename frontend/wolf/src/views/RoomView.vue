@@ -88,12 +88,8 @@
               {{ gameStarted && currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
             </h3>
             <button v-if="gameStarted && currentPlayerRole" @click="showRoleModal = true"
-              class="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-purple-500/20"
-              :class="{
-                'text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
-                'text-blue-400': currentPlayerRole?.camp === 'Villageois',
-                'text-yellow-400': currentPlayerRole?.camp === 'Neutre'
-              }">
+              class="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-indigo-500/20 text-indigo-400"
+              title="Cliquez pour voir les détails de votre rôle">
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" />

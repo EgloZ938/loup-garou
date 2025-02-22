@@ -153,7 +153,7 @@ export default {
             setTimeout(() => {
                 this.isLeaving = false;
                 this.$emit('close');
-            }, 550);
+            }, 700);
         }
     },
     emits: ['close']
@@ -167,7 +167,7 @@ export default {
 }
 
 .animate-fade-out {
-    animation: fadeOut 0.55s ease-out forwards;
+    animation: fadeOut 0.5s ease-out forwards;
 }
 
 .animate-twinkle {
