@@ -27,21 +27,21 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 9L2 3L8 6M19 9L22 3L16 6"
                 class="text-purple-400 transition-colors duration-300 group-hover:text-purple-300" />
 
-              <!-- Tête plus agressive -->
+              <!-- Tête -->
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 21C7 21 3 17 3 12C3 7 7 4 12 4C17 4 21 7 21 12C21 17 17 21 12 21Z" />
 
-              <!-- Yeux violets lumineux avec animation -->
+              <!-- Yeux -->
               <circle cx="9" cy="10" r="1.2"
                 class="fill-purple-400 transition-colors duration-300 group-hover:fill-purple-200 animate-blink" />
               <circle cx="15" cy="10" r="1.2"
                 class="fill-purple-400 transition-colors duration-300 group-hover:fill-purple-200 animate-blink" />
 
-              <!-- Museau plus bestial avec animation -->
+              <!-- Museau -->
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M12 13L11 15.5L12 17L13 15.5L12 13Z" class="animate-snarl" />
 
-              <!-- Crocs plus menaçants avec animation -->
+              <!-- Crocs -->
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 15L8.5 17.5M14 15L15.5 17.5"
                 class="text-purple-200 animate-growl" />
 
@@ -50,7 +50,7 @@
                 class="text-purple-500 transition-colors duration-300 group-hover:text-purple-300" />
             </svg>
 
-            <!-- Ombre violette portée - Intensifiée au hover -->
+            <!-- Ombre violette portée -->
             <div
               class="absolute -inset-1 bg-purple-900/30 blur-sm -z-10 rounded-full transition-all duration-300 group-hover:bg-purple-600/40 group-hover:blur-md">
             </div>

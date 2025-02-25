@@ -39,7 +39,10 @@
               Room: <span class="text-gray-300">{{ roomCode }}</span>
             </h2>
             <div class="flex items-center gap-2">
-              <p class="text-gray-400 text-sm">La nuit va bientôt tomber...</p>
+              <p class="text-gray-400 text-sm">
+                <template v-if="!gameStarted">La nuit va bientôt tomber...</template>
+                <template v-else>La partie est en cours</template>
+              </p>
               <span class="text-purple-400 text-sm">({{ connectedUsers.length }}/16 joueurs)</span>
             </div>
           </div>
@@ -74,27 +77,14 @@
         </p>
       </div>
 
-      <!-- Grille principale -->
-      <div class="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6 min-h-0">
-        <!-- Liste des joueurs -->
+      <!-- Grille principale - Affichage différent selon si la partie est lancée ou non -->
+      <div v-if="!gameStarted" class="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 mt-6 min-h-0">
+        <!-- Liste des joueurs - Avant le début de partie -->
         <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 p-6 flex flex-col rounded-xl min-h-0">
           <div class="flex items-center gap-2 mb-4 flex-shrink-0">
-            <h3 class="text-lg font-bold flex-shrink-0" :class="{
-              'text-purple-400': !gameStarted,
-              'text-red-400': gameStarted && currentPlayerRole?.camp === 'Loups-Garous',
-              'text-blue-400': gameStarted && currentPlayerRole?.camp === 'Villageois',
-              'text-yellow-400': gameStarted && currentPlayerRole?.camp === 'Neutre'
-            }">
-              {{ gameStarted && currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
+            <h3 class="text-lg font-bold flex-shrink-0 text-purple-400">
+              Villageois
             </h3>
-            <button v-if="gameStarted && currentPlayerRole" @click="showRoleModal = true"
-              class="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-indigo-500/20 text-indigo-400"
-              title="Cliquez pour voir les détails de votre rôle">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" />
-              </svg>
-            </button>
           </div>
 
           <!-- Container scrollable pour les joueurs -->
@@ -124,40 +114,9 @@
               </div>
             </div>
           </div>
-
-          <!-- Menu contextuel -->
-          <div v-if="contextMenu.show"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-            @click="closeContextMenu">
-            <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-4 w-64" @click.stop>
-              <p class="text-gray-300 mb-4">
-                Que souhaitez-vous faire avec {{ contextMenu.user }} ?
-              </p>
-
-              <div class="space-y-2">
-                <button @click="promotePlayer(contextMenu.user)"
-                  class="w-full px-4 py-2 text-left hover:bg-purple-900/30 flex items-center gap-2 rounded-lg transition-colors">
-                  <svg class="w-4 h-4 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z" />
-                  </svg>
-                  <span class="text-gray-300">Promouvoir</span>
-                </button>
-
-                <button @click="kickPlayer(contextMenu.user)"
-                  class="w-full px-4 py-2 text-left hover:bg-red-900/30 flex items-center gap-2 rounded-lg transition-colors">
-                  <svg class="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                      d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
-                  </svg>
-                  <span class="text-red-400">Exclure</span>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <!-- Chat -->
+        <!-- Chat - Avant le début de partie -->
         <div
           class="lg:col-span-3 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 flex flex-col rounded-xl min-h-0">
           <!-- Messages -->
@@ -186,6 +145,188 @@
                 Envoyer
               </button>
             </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vue de jeu - Après le début de partie -->
+      <div v-if="gameStarted" class="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 mt-6 min-h-0">
+        <!-- Liste des joueurs - Maintenue à gauche -->
+        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 p-6 flex flex-col rounded-xl min-h-0">
+          <div class="flex items-center gap-2 mb-4 flex-shrink-0">
+            <h3 class="text-lg font-bold flex-shrink-0" :class="{
+              'text-red-400': currentPlayerRole?.camp === 'Loups-Garous',
+              'text-blue-400': currentPlayerRole?.camp === 'Villageois',
+              'text-yellow-400': currentPlayerRole?.camp === 'Neutre'
+            }">
+              {{ currentPlayerRole ? currentPlayerRole.role : 'Villageois' }}
+            </h3>
+            <button v-if="currentPlayerRole" @click="showRoleModal = true"
+              class="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-indigo-500/20 text-indigo-400"
+              title="Cliquez pour voir les détails de votre rôle">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Container scrollable pour les joueurs -->
+          <div class="flex-1 overflow-y-auto pr-2 min-h-0">
+            <div class="space-y-2">
+              <div v-for="user in connectedUsers" :key="user" :class="[
+                'p-3 rounded-lg flex items-center gap-3 transition-all duration-300 hover:bg-purple-900/30',
+                user === socketStore.username
+                  ? 'backdrop-blur-sm bg-purple-900/20 border border-purple-500/20'
+                  : 'backdrop-blur-sm bg-gray-800/10 border border-gray-700/20'
+              ]">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <div class="flex items-center gap-2 flex-1">
+                  <span class="text-gray-300">{{ user }}</span>
+                  <!-- Couronne pour le créateur -->
+                  <svg v-if="isRoomCreator(user)" class="w-4 h-4 text-yellow-500 shrink-0 animate-pulse"
+                    viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                      d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zone centrale - Cercle des joueurs -->
+        <div
+          class="lg:col-span-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-6 flex flex-col min-h-0 relative">
+          <h3 class="text-xl font-bold text-purple-400 mb-4">Village</h3>
+
+          <!-- Cercle des joueurs -->
+          <div class="flex-1 relative">
+            <div class="absolute inset-0 flex items-center justify-center">
+              <!-- Cercle de fond -->
+              <div class="w-4/5 h-4/5 rounded-full border border-purple-500/20 relative">
+
+                <!-- Joueurs positionnés en cercle -->
+                <div v-for="(user, index) in connectedUsers" :key="user" class="absolute" :style="{
+                  top: `${50 + 40 * Math.sin(2 * Math.PI * index / connectedUsers.length)}%`,
+                  left: `${50 + 40 * Math.cos(2 * Math.PI * index / connectedUsers.length)}%`,
+                  transform: 'translate(-50%, -50%)'
+                }">
+                  <div class="flex flex-col items-center justify-center">
+                    <!-- Avatar avec indication de rôle (si visible) -->
+                    <div class="relative">
+                      <img src="/src/assets/images/roles/avatar_default.png" alt="Avatar"
+                        class="w-16 h-16 rounded-full border-2 transition-transform hover:scale-110 duration-300"
+                        :class="{
+                          'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
+                          'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username))
+                        }">
+
+                      <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
+                      <div
+                        v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username))"
+                        class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-2" :class="{
+                          'border-red-400 bg-red-900/50': isWerewolf(user),
+                          'border-blue-400 bg-blue-900/50': getPlayerRole(user)?.camp === 'Villageois',
+                          'border-yellow-400 bg-yellow-900/50': getPlayerRole(user)?.camp === 'Neutre'
+                        }">
+                        <img v-if="getPlayerRoleDetails(user)" :src="getPlayerRoleDetails(user)?.icon"
+                          :alt="getPlayerRole(user)?.role" class="w-full h-full rounded-full">
+                      </div>
+                    </div>
+
+                    <!-- Nom du joueur -->
+                    <span class="text-gray-300 mt-2 text-sm font-medium">{{ user }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bouton de chat -->
+          <button @click="toggleChat"
+            class="absolute bottom-6 right-6 bg-purple-500 hover:bg-purple-600 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal du chat (s'affiche uniquement quand la partie est lancée et le bouton cliqué) -->
+      <div v-if="gameStarted && showChatModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-40"
+        @click.self="toggleChat">
+        <div
+          class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl w-full max-w-2xl h-3/4 flex flex-col">
+          <!-- Entête du chat -->
+          <div class="p-4 border-b border-purple-500/20 flex justify-between items-center">
+            <h3 class="text-xl font-bold text-purple-400">Chat</h3>
+            <button @click="toggleChat" class="text-gray-400 hover:text-gray-200">
+              <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Messages -->
+          <div class="flex-1 p-6 overflow-y-auto space-y-4" ref="chatBox">
+            <div v-for="(msg, index) in messages" :key="index" :class="msg.type === 'system'
+              ? 'text-purple-400 text-sm italic'
+              : 'text-gray-300'">
+              <template v-if="msg.type === 'system'">
+                {{ msg.content }}
+              </template>
+              <template v-else>
+                <span class="text-purple-400 font-medium">{{ msg.username }} : </span>
+                <span class="text-gray-300">{{ msg.content }}</span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Input du chat -->
+          <div class="p-4 border-t border-purple-500/20">
+            <form @submit.prevent="sendMessage" class="flex gap-3">
+              <input v-model="newMessage" type="text" class="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-300 placeholder-gray-500
+                 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500
+                 transition-colors" placeholder="Votre message..." />
+              <button type="submit"
+                class="wolf-button-primary whitespace-nowrap hover:scale-105 transition-transform duration-300">
+                Envoyer
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu contextuel -->
+      <div v-if="contextMenu.show"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+        @click="closeContextMenu">
+        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-4 w-64" @click.stop>
+          <p class="text-gray-300 mb-4">
+            Que souhaitez-vous faire avec {{ contextMenu.user }} ?
+          </p>
+
+          <div class="space-y-2">
+            <button @click="promotePlayer(contextMenu.user)"
+              class="w-full px-4 py-2 text-left hover:bg-purple-900/30 flex items-center gap-2 rounded-lg transition-colors">
+              <svg class="w-4 h-4 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5Z" />
+              </svg>
+              <span class="text-gray-300">Promouvoir</span>
+            </button>
+
+            <button @click="kickPlayer(contextMenu.user)"
+              class="w-full px-4 py-2 text-left hover:bg-red-900/30 flex items-center gap-2 rounded-lg transition-colors">
+              <svg class="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                  d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" />
+              </svg>
+              <span class="text-red-400">Exclure</span>
+            </button>
           </div>
         </div>
       </div>
@@ -308,6 +449,7 @@ export default {
     const currentPlayerRole = ref(null);
     const error = ref("");
     const showRoleModal = ref(false);
+    const showChatModal = ref(false);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -411,6 +553,44 @@ export default {
       }
       return null;
     });
+
+    // Vérifie si un joueur est un loup-garou
+    const isWerewolf = (username) => {
+      if (!rolesData.value || !rolesData.value.players) return false;
+
+      const playerData = rolesData.value.players.find(
+        player => player.pseudo === username
+      );
+
+      return playerData && playerData.camp === 'Loups-Garous';
+    };
+
+    // Récupère le rôle d'un joueur
+    const getPlayerRole = (username) => {
+      if (!rolesData.value || !rolesData.value.players) return null;
+
+      return rolesData.value.players.find(
+        player => player.pseudo === username
+      );
+    };
+
+    // Récupère les détails du rôle d'un joueur
+    const getPlayerRoleDetails = (username) => {
+      const playerRole = getPlayerRole(username);
+      if (!playerRole) return null;
+
+      return rolesDataJSON[playerRole.role];
+    };
+
+    // Fonction pour afficher/masquer le chat
+    const toggleChat = () => {
+      showChatModal.value = !showChatModal.value;
+      if (showChatModal.value) {
+        nextTick(() => {
+          scrollToBottom();
+        });
+      }
+    };
 
     onMounted(() => {
       window.addEventListener("beforeunload", handleBeforeUnload);
@@ -613,6 +793,11 @@ export default {
       showRoleReveal,
       currentPlayerRole,
       showRoleModal,
+      showChatModal,
+      toggleChat,
+      isWerewolf,
+      getPlayerRole,
+      getPlayerRoleDetails,
     };
   },
 };
