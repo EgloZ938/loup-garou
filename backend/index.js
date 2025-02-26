@@ -20,14 +20,26 @@ const rooms = new Map();
 const roomCreators = new Map();
 const gameStatus = new Map();
 
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
 // Fonction pour obtenir les rôles via OpenAI
 async function assignRoles(players) {
     try {
+
+        // Mélanger les joueurs avant de les envoyer à ChatGPT
+        const shuffledPlayers = shuffleArray([...players]);
+
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             "messages": [{
                 "role": "user",
-                "content": `Assigne des rôles du jeu Loup-Garou à ces joueurs de manière TOTALEMENT ALÉATOIRE : ${players.join(', ')}.
+                "content": `Assigne des rôles du jeu Loup-Garou à ces joueurs : ${shuffledPlayers.join(', ')}.
 
                 ### RÈGLES CRITIQUES DE VALIDATION :
                 - La réponse DOIT contenir EXACTEMENT ${players.length} joueurs, ni plus ni moins
