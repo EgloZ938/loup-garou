@@ -222,7 +222,8 @@
                         class="w-20 h-20 rounded-full border-2 transition-transform hover:scale-110 duration-300"
                         :class="{
                           'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
-                          'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username))
+                          'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username)),
+                          'border-purple-400': user === socketStore.username
                         }">
 
                       <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
@@ -239,7 +240,10 @@
                     </div>
 
                     <!-- Nom du joueur -->
-                    <span class="text-gray-300 mt-2 text-base font-medium">{{ user }}</span>
+                    <span class="mt-2 text-base font-medium" :class="{
+                      'text-gray-300': user !== socketStore.username,
+                      'text-purple-400': user === socketStore.username
+                    }">{{ user }}</span>
                   </div>
                 </div>
               </div>
