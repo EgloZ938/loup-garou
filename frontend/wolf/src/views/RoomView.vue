@@ -30,7 +30,10 @@
     </div>
 
     <!-- Contenu principal -->
-    <div v-else class="max-w-6xl mx-auto p-6 h-screen flex flex-col">
+    <div v-else :class="[
+      'mx-auto p-6 h-screen flex flex-col',
+      gameStarted ? 'max-w-8xl' : 'max-w-6xl'
+    ]">
       <!-- En-tête -->
       <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-6">
         <div class="flex justify-between items-center">
@@ -196,58 +199,58 @@
         </div>
 
         <!-- Zone centrale - Cercle des joueurs -->
-        <div class="lg:col-span-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl p-6 flex flex-col min-h-0 relative">
-          <h3 class="text-xl font-bold text-purple-400 mb-4">Village</h3>
-          
+        <div
+          class="lg:col-span-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl flex flex-col min-h-0 relative">
+          <h3 class="text-xl font-bold text-purple-400 mb-4 absolute top-6 left-6">Village</h3>
+
           <!-- Cercle des joueurs -->
-          <div class="flex-1 relative">
+          <div class="flex-1 relative" style="min-height: 700px;">
             <div class="absolute inset-0 flex items-center justify-center">
               <!-- Cercle de fond -->
-              <div class="w-4/5 h-4/5 rounded-full border border-purple-500/20 relative">
-                
+              <div class="rounded-full border border-purple-500/20 relative" style="height: 95%; width: 70%;">
+
                 <!-- Joueurs positionnés en cercle -->
-                <div v-for="(user, index) in connectedUsers" :key="user" class="absolute"
-                  :style="{
-                    top: `${50 + 40 * Math.sin(2 * Math.PI * index / connectedUsers.length)}%`,
-                    left: `${50 + 40 * Math.cos(2 * Math.PI * index / connectedUsers.length)}%`,
-                    transform: 'translate(-50%, -50%)'
-                  }">
+                <div v-for="(user, index) in connectedUsers" :key="user" class="absolute" :style="{
+                  top: `${50 + 42 * Math.sin(2 * Math.PI * index / connectedUsers.length)}%`,
+                  left: `${50 + 42 * Math.cos(2 * Math.PI * index / connectedUsers.length)}%`,
+                  transform: 'translate(-50%, -50%)'
+                }">
                   <div class="flex flex-col items-center justify-center">
                     <!-- Avatar avec indication de rôle (si visible) -->
                     <div class="relative">
                       <img src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
-                        class="w-16 h-16 rounded-full border-2 transition-transform hover:scale-110 duration-300"
+                        class="w-20 h-20 rounded-full border-2 transition-transform hover:scale-110 duration-300"
                         :class="{
                           'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
                           'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username))
                         }">
-                      
+
                       <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
-                      <div v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username))" 
-                        class="absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-2"
-                        :class="{
+                      <div
+                        v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username))"
+                        class="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-2" :class="{
                           'border-red-400 bg-red-900/50': isWerewolf(user),
                           'border-blue-400 bg-blue-900/50': getPlayerRole(user)?.camp === 'Villageois',
                           'border-yellow-400 bg-yellow-900/50': getPlayerRole(user)?.camp === 'Neutre'
                         }">
-                        <img v-if="getPlayerRoleDetails(user)" :src="getPlayerRoleDetails(user)?.icon" :alt="getPlayerRole(user)?.role" 
-                          class="w-full h-full rounded-full">
+                        <img v-if="getPlayerRoleDetails(user)" :src="getPlayerRoleDetails(user)?.icon"
+                          :alt="getPlayerRole(user)?.role" class="w-full h-full rounded-full">
                       </div>
                     </div>
-                    
+
                     <!-- Nom du joueur -->
-                    <span class="text-gray-300 mt-2 text-sm font-medium">{{ user }}</span>
+                    <span class="text-gray-300 mt-2 text-base font-medium">{{ user }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          
+
           <!-- Bouton de chat -->
-          <button @click="toggleChat" 
+          <button @click="toggleChat"
             class="absolute bottom-6 right-6 bg-purple-500 hover:bg-purple-600 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110">
             <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" 
+              <path stroke-linecap="round" stroke-linejoin="round"
                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </button>
@@ -258,7 +261,8 @@
       <div v-if="gameStarted && showChatModal"
         class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-40"
         @click.self="toggleChat">
-        <div class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl w-full max-w-2xl h-3/4 flex flex-col">
+        <div
+          class="backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl w-full max-w-2xl h-3/4 flex flex-col">
           <!-- Entête du chat -->
           <div class="p-4 border-b border-purple-500/20 flex justify-between items-center">
             <h3 class="text-xl font-bold text-purple-400">Chat</h3>
