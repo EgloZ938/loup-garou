@@ -29,11 +29,9 @@ function shuffleArray(array) {
     return array;
 }
 
-// Fonction pour obtenir les rôles via OpenAI
 async function assignRoles(players) {
     try {
         const shuffledPlayers = shuffleArray([...players]);
-        // Simulation d'une réponse d'OpenAI
         const completion = {
             "players": [
                 {"pseudo": "J1", "role": "Loup-Garou", "camp": "Loups-Garous"},

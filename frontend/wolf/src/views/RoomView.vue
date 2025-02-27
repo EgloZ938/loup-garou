@@ -517,21 +517,6 @@ export default {
       }
     };
 
-    const handleContextMenu = (event, user) => {
-      console.log("Click droit sur:", user);
-      console.log("Username actuel:", socketStore.username);
-      console.log("Créateur:", roomCreator.value);
-      console.log("Est créateur?", isRoomCreator(socketStore.username));
-
-      if (
-        isRoomCreator(socketStore.username) &&
-        user !== socketStore.username
-      ) {
-        showContextMenu(event, user);
-      }
-    };
-
-
     const startCountdown = () => {
       showCountdown.value = true;
       countdown.value = 5;
