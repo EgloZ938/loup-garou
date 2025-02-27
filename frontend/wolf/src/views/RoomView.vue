@@ -647,12 +647,8 @@ export default {
         if (roles) {
           console.log('Rôles attribués:', roles);
           try {
-            // On parse la string en JSON
-            const parsedRoles = JSON.parse(roles);
-            rolesData.value = parsedRoles;
-
-            // Trouvons le rôle du joueur actuel
-            const playerData = parsedRoles.players.find(
+            rolesData.value = roles;
+            const playerData = roles.players.find(
               player => player.pseudo === socketStore.username
             );
             if (playerData) {
