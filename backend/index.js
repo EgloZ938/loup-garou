@@ -9,6 +9,7 @@ const io = require('socket.io')(http, {
 });
 require('dotenv').config();
 const OpenAI = require('openai');
+const { GameManager } = require('./gameLogic');
 
 
 const openai = new OpenAI({
@@ -19,6 +20,8 @@ const MIN_PLAYERS = 6;
 const rooms = new Map();
 const roomCreators = new Map();
 const gameStatus = new Map();
+
+const gameManager = new GameManager();
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -121,7 +124,7 @@ io.on('connection', (socket) => {
             exists: roomExists,
             creator: roomExists ? roomCreators.get(roomCode) : null,
             isFull: currentPlayers >= MAX_PLAYERS,
-            usedUsernames: usedUsernames  // On envoie la liste des pseudos utilisés
+            usedUsernames: usedUsernames
         });
     });
 
@@ -165,15 +168,25 @@ io.on('connection', (socket) => {
                 creator: roomCreators.get(room)
             });
 
+            // Vérifier si le jeu est déjà en cours
+            const gameRunning = gameStatus.get(room);
             io.to(room).emit('gameStatus', {
-                started: gameStatus.get(room)
+                started: gameRunning
             });
+
+            // Si le jeu est en cours, envoyer l'état actuel du jeu au joueur qui rejoint
+            if (gameRunning) {
+                const game = gameManager.getGame(room);
+                if (game) {
+                    const gameState = game.getGameState();
+                    socket.emit('gameStateUpdate', gameState);
+                }
+            }
 
             io.to(room).emit('systemMessage', `${username} a rejoint la partie (${newPlayerCount}/${MAX_PLAYERS})`);
         }
     });
 
-    // Ajout de l'événement chat manquant
     socket.on('chatMessage', ({ username, room, message }) => {
         io.to(room).emit('message', {
             type: 'chat',
@@ -198,14 +211,21 @@ io.on('connection', (socket) => {
 
                         try {
                             // On vérifie que c'est bien du JSON valide
-                            const parsedRoles = JSON.parse(cleanedResponse);
+                            JSON.parse(cleanedResponse);
 
+                            // Marquer le jeu comme commencé
                             gameStatus.set(roomCode, true);
+
+                            // Envoyer les rôles aux joueurs
                             io.to(roomCode).emit('gameStatus', {
                                 started: true,
-                                roles: cleanedResponse // On envoie la version nettoyée
+                                roles: cleanedResponse
                             });
-                            io.to(roomCode).emit('systemMessage', 'La partie commence !');
+
+                            // Créer et démarrer l'instance de jeu
+                            const game = gameManager.createGame(roomCode, currentPlayers, io);
+                            game.start(cleanedResponse);
+
                         } catch (parseError) {
                             console.error('Erreur de parsing JSON:', parseError);
                             io.to(roomCode).emit('systemMessage', 'Erreur lors du lancement de la partie');
@@ -228,6 +248,7 @@ io.on('connection', (socket) => {
                 rooms.delete(room);
                 roomCreators.delete(room);
                 gameStatus.delete(room);
+                gameManager.removeGame(room);
             } else {
                 if (roomCreators.get(room) === username) {
                     const newCreator = Array.from(rooms.get(room))[0];

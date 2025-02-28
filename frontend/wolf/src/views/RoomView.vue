@@ -1,12 +1,21 @@
 <template>
   <!-- Container principal avec fond et particules -->
-  <div class="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 relative overflow-hidden">
+  <div class="min-h-screen relative overflow-hidden transition-all duration-1000" :class="{
+    'bg-gradient-to-b from-gray-900 to-gray-950': gamePhase !== 'night',
+    'bg-gradient-to-b from-blue-950 to-gray-950': gamePhase === 'night'
+  }">
     <!-- Particules/étoiles en arrière-plan -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div v-for="i in 20" :key="i" class="absolute w-1 h-1 bg-purple-400/20 rounded-full animate-twinkle" :style="{
+    <div class="absolute inset-0 overflow-hidden transition-opacity duration-1000"
+      :class="{ 'opacity-20': gamePhase !== 'night', 'opacity-100': gamePhase === 'night' }">
+      <div v-for="i in 40" :key="i" class="absolute rounded-full animate-twinkle" :class="{
+        'bg-purple-400/20 w-1 h-1': gamePhase !== 'night',
+        'bg-blue-400/70': gamePhase === 'night'
+      }" :style="{
         top: `${Math.random() * 100}%`,
         left: `${Math.random() * 100}%`,
-        animationDelay: `${Math.random() * 3}s`
+        animationDelay: `${Math.random() * 5}s`,
+        width: gamePhase === 'night' ? `${Math.random() * 2 + 1}px` : '1px',
+        height: gamePhase === 'night' ? `${Math.random() * 2 + 1}px` : '1px'
       }">
       </div>
     </div>
@@ -200,8 +209,48 @@
 
         <!-- Zone centrale - Cercle des joueurs -->
         <div
-          class="lg:col-span-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl flex flex-col min-h-0 relative">
+          class="lg:col-span-4 backdrop-blur-sm rounded-xl flex flex-col min-h-0 relative transition-all duration-1000"
+          :class="{
+            'bg-purple-900/10 border border-purple-500/20': gamePhase !== 'night',
+            'bg-blue-950/30 border border-blue-600/20': gamePhase === 'night'
+          }">
           <h3 class="text-xl font-bold text-purple-400 mb-4 absolute top-6 left-6">Village</h3>
+
+          <div v-if="gameStarted && (gamePhase === 'day' || gamePhase === 'night')"
+            class="absolute top-6 right-6 flex items-center gap-4">
+            <!-- Indicateur de phase -->
+            <div class="flex items-center gap-2">
+              <div v-if="gamePhase === 'day'" class="flex items-center">
+                <svg class="w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd"
+                    d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                    clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-yellow-400 text-lg font-semibold ml-1">Jour</span>
+              </div>
+              <div v-else class="flex items-center">
+                <svg class="w-7 h-7 text-blue-400" fill="currentColor" viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                </svg>
+                <span class="text-blue-400 text-lg font-semibold ml-1">Nuit</span>
+              </div>
+            </div>
+
+            <!-- Timer -->
+            <div
+              class="backdrop-blur-sm bg-purple-900/30 border border-purple-500/30 rounded-full px-5 py-2 flex items-center">
+              <svg class="w-5 h-5 mr-2" :class="gamePhase === 'day' ? 'text-yellow-400' : 'text-blue-400'" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span class="text-xl font-bold" :class="gamePhase === 'day' ? 'text-yellow-400' : 'text-blue-400'">
+                {{ clientTimer }}s
+              </span>
+            </div>
+          </div>
 
           <!-- Cercle des joueurs -->
           <div class="flex-1 relative" style="min-height: 700px;">
@@ -408,6 +457,40 @@
           </div>
         </div>
       </div>
+
+      <!-- Transition de phase jour/nuit -->
+      <div v-if="showPhaseTransition"
+        class="fixed inset-0 flex items-center justify-center z-50 transition-all duration-1000"
+        :class="transitionText.includes('nuit') ? 'bg-blue-950/80' : 'bg-amber-800/70'">
+        <div class="text-center transform scale-100 opacity-100 transition-all duration-1000 max-w-4xl">
+          <div class="flex justify-center mb-8">
+            <div v-if="transitionText.includes('nuit')" class="animate-pulse">
+              <svg class="w-24 h-24 text-blue-200" fill="currentColor" viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+              </svg>
+            </div>
+            <div v-else class="animate-pulse">
+              <svg class="w-24 h-24 text-yellow-200" fill="currentColor" viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd"
+                  d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"
+                  clip-rule="evenodd"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-5xl font-bold mb-4"
+            :class="transitionText.includes('nuit') ? 'text-blue-100' : 'text-yellow-100'">
+            {{ transitionText }}
+          </div>
+          <p class="text-xl text-gray-300 max-w-xl mx-auto" v-if="transitionText.includes('nuit')">
+            Les loups-garous se réveillent et partent à la chasse...
+          </p>
+          <p class="text-xl text-gray-300 max-w-xl mx-auto" v-else>
+            Le village se réveille et découvre ce qu'il s'est passé cette nuit...
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Modal de détail du rôle -->
@@ -458,6 +541,13 @@ export default {
     const error = ref("");
     const showRoleModal = ref(false);
     const showChatModal = ref(false);
+    const gamePhase = ref('waiting'); // 'waiting', 'day', 'night'
+    const phaseTimer = ref(0);
+    const showPhaseTransition = ref(false);
+    const transitionText = ref('');
+    const clientTimer = ref(0);
+    const clientTimerInterval = ref(null);
+
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -692,6 +782,53 @@ export default {
           }
         }, 1000);
       });
+
+      socketStore.socket.on('phaseChanged', ({ phase, timeLeft, turn }) => {
+        // Animation de transition
+        showPhaseTransition.value = true;
+
+        if (phase === 'night') {
+          transitionText.value = 'La nuit tombe sur le village...';
+        } else {
+          transitionText.value = `Le jour se lève sur le village (Jour ${turn})`;
+        }
+
+        // Après 3 secondes, masque la transition et applique la nouvelle phase
+        setTimeout(() => {
+          gamePhase.value = phase;
+          phaseTimer.value = timeLeft;
+          showPhaseTransition.value = false;
+        }, 3000);
+      });
+
+      socketStore.socket.on('timerUpdate', ({ timeLeft, phase }) => {
+        // Met à jour le timer serveur
+        phaseTimer.value = timeLeft;
+        gamePhase.value = phase;
+
+        // Réinitialise le timer client
+        clientTimer.value = timeLeft;
+
+        // Nettoie l'intervalle existant si nécessaire
+        if (clientTimerInterval.value) {
+          clearInterval(clientTimerInterval.value);
+        }
+
+        // Démarre un timer local pour une animation fluide
+        clientTimerInterval.value = setInterval(() => {
+          if (clientTimer.value > 0) {
+            clientTimer.value--;
+          }
+        }, 1000);
+      });
+
+      socketStore.socket.on('gameStateUpdate', (gameState) => {
+        if (gameState.isRunning) {
+          gamePhase.value = gameState.currentPhase;
+          phaseTimer.value = gameState.timeLeft;
+        }
+      });
+
     });
 
     onUnmounted(() => {
@@ -705,6 +842,10 @@ export default {
       socketStore.socket.off("systemMessage");
       socketStore.socket.off("gameStatus");
       socketStore.socket.off("playerKicked");
+
+      if (clientTimerInterval.value) {
+        clearInterval(clientTimerInterval.value);
+      }
     });
 
     const setUsername = () => {
@@ -806,7 +947,32 @@ export default {
       isWerewolf,
       getPlayerRole,
       getPlayerRoleDetails,
+      gamePhase,
+      phaseTimer,
+      showPhaseTransition,
+      transitionText,
+      clientTimer,
     };
   },
 };
 </script>
+
+<style scoped>
+@keyframes twinkle {
+  0% {
+    opacity: 0.2;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.animate-twinkle {
+  animation: twinkle 3s ease-in-out infinite;
+}
+</style>
