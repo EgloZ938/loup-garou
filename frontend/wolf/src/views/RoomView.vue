@@ -474,6 +474,7 @@ export default {
     const voted = ref(false);
     const isNight = ref(false);
     const eliminatedPlayers = ref([]);
+    const currentTurn = ref("");
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -595,6 +596,13 @@ export default {
       }
     });
 
+    socketStore.socket.on("turnUpdate", ({ turn }) => {
+      currentTurn.value = turn;
+      console.log("Nouveau tour :", turn);
+    });
+    socketStore.socket.on("gameOver", ({ winner }) => {
+      alert(`Game over! Winner: ${winner}`);
+    });
 
     const roleDetails = computed(() => {
       if (currentPlayerRole.value?.role) {
@@ -742,6 +750,8 @@ export default {
       socketStore.socket.off("systemMessage");
       socketStore.socket.off("gameStatus");
       socketStore.socket.off("playerKicked");
+      socketStore.socket.off("turnUpdate");
+      socketStore.socket.off("gameOver");
     });
 
     const setUsername = () => {
@@ -847,7 +857,8 @@ export default {
       eliminatedPlayers,
       voteVillage,
       voteLoups,
-      handlePlayerClick
+      handlePlayerClick,
+      currentTurn,
     };
   },
 };

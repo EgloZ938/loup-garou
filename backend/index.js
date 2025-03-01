@@ -23,6 +23,8 @@ const votes = new Map();
 const loupVotes = new Map();
 const rolesAssignments = new Map();
 const eliminatedPlayers = new Map();
+const turnOrders = new Map();
+const currentTurnIndex = new Map();
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -51,6 +53,30 @@ async function assignRoles(players) {
         return null;
     }
 }
+
+function computeTurnOrder(roomCode) {
+    const assignments = rolesAssignments.get(roomCode);
+    if (!assignments) return ["Village"];
+    const players = assignments.players;
+    // const hasVoyante = players.some(p => p.role === "Voyante");
+    // const hasSorciere = players.some(p => p.role === "Sorcière");
+    const order = ["Village"];
+    // if (hasVoyante) order.push("Voyante");
+    order.push("Loups");
+    // if (hasSorciere) order.push("Sorcière");
+    return order;
+}
+
+function nextTurn(roomCode) {
+    if (!turnOrders.has(roomCode)) return;
+    let order = turnOrders.get(roomCode);
+    let index = currentTurnIndex.get(roomCode);
+    index = (index + 1) % order.length;
+    currentTurnIndex.set(roomCode, index);
+    const next = order[index];
+    io.to(roomCode).emit("turnUpdate", { turn: next });
+}
+
 
 function getPlayerRole(player, completion) {
     const foundPlayer = completion.players.find(p => p.pseudo === player);
@@ -184,6 +210,11 @@ io.on('connection', (socket) => {
                             roles: roleAssignments 
                         });
                         io.to(roomCode).emit('systemMessage', 'La partie commence !');
+
+                        const order = computeTurnOrder(roomCode);
+                        turnOrders.set(roomCode, order);
+                        currentTurnIndex.set(roomCode, 0);
+                        io.to(roomCode).emit("turnUpdate", { turn: order[0] });
                     }
                 } catch (error) {
                     console.error('Erreur lors de l\'attribution des rôles:', error);
@@ -222,10 +253,20 @@ io.on('connection', (socket) => {
             eliminatedPlayers.get(roomCode).add(eliminated);
     
             votes.delete(roomCode);
+
+            // // Vérifier si le joueur éliminé est un Chasseur
+            // const eliminatedRole = getPlayerRole(eliminated, rolesAssignments.get(roomCode));
+            // if (eliminatedRole && eliminatedRole.role === "Chasseur") {
+            //     // En fonction du tour courant (jour), on envoie la phase Chasseur
+            //     io.to(roomCode).emit("chasseurTurn", { eliminated });
+            //     // La suite (transition vers le tour suivant) se fera après l'action du chasseur
+            // } else {
+            //     // Passer au tour suivant
+               nextTurn(roomCode);
+            // }
+            
+            checkVictory(roomCode);
         }
-    
-        console.log(votes);
-        checkVictory(roomCode);
     });
     
     
@@ -248,6 +289,14 @@ io.on('connection', (socket) => {
             }
             eliminatedPlayers.get(roomCode).add(eliminated);
             loupVotes.delete(roomCode);
+            
+            // // Vérifier si le joueur éliminé est un Chasseur
+            // const eliminatedRole = getPlayerRole(eliminated, rolesAssignments.get(roomCode));
+            // if (eliminatedRole && eliminatedRole.role === "Chasseur") {
+            //     io.to(roomCode).emit("chasseurTurn", { eliminated });
+            // } else {
+                nextTurn(roomCode);
+            // }
             checkVictory(roomCode);
 
         }
