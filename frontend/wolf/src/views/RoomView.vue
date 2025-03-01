@@ -589,10 +589,18 @@ export default {
       socketStore.socket.emit("voyanteAction", { roomCode: props.roomCode, target: user });
     };
 
+    const handleChasseurClick = (user) => {
+      socketStore.socket.emit("chasseurAction", { roomCode: props.roomCode, target: user });
+    };
+
     const handlePlayerClick = (user) => {
-      if (voted.value || eliminatedPlayers.value.includes(socketStore.username)) return;
+      if (voted.value || (eliminatedPlayers.value.includes(socketStore.username) && currentPlayerRole.value?.role !== "Chasseur")) return;
       if (currentTurn.value === "Voyante" && currentPlayerRole.value?.role === "Voyante") {
         handleVoyanteClick(user);
+        return;
+      }
+      if (currentTurn.value === "Chasseur" && currentPlayerRole.value?.role === "Chasseur") {
+        handleChasseurClick(user);
         return;
       }
       if (isNight.value) {
@@ -622,6 +630,12 @@ export default {
       currentTurn.value = turn;
       console.log("Nouveau tour :", turn);
     });
+
+    socketStore.socket.on("chasseurTurn", ({ eliminated }) => {
+      currentTurn.value = "Chasseur";
+      console.log("Phase Chasseur lancée pour", eliminated);
+    });
+
     socketStore.socket.on("voyanteResult", ({ target, role, camp }) => {
       // On peut mettre à jour revealedRoles pour le joueur ciblé
       revealedRoles.value[target] = true;
@@ -781,6 +795,7 @@ export default {
       socketStore.socket.off("gameStatus");
       socketStore.socket.off("playerKicked");
       socketStore.socket.off("turnUpdate");
+      socketStore.socket.off("chasseurTurn");
       socketStore.socket.off("gameOver");
     });
 

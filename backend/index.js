@@ -254,16 +254,13 @@ io.on('connection', (socket) => {
     
             votes.delete(roomCode);
 
-            // // Vérifier si le joueur éliminé est un Chasseur
-            // const eliminatedRole = getPlayerRole(eliminated, rolesAssignments.get(roomCode));
-            // if (eliminatedRole && eliminatedRole.role === "Chasseur") {
-            //     // En fonction du tour courant (jour), on envoie la phase Chasseur
-            //     io.to(roomCode).emit("chasseurTurn", { eliminated });
-            //     // La suite (transition vers le tour suivant) se fera après l'action du chasseur
-            // } else {
-            //     // Passer au tour suivant
+            const eliminatedRole = getPlayerRole(eliminated, rolesAssignments.get(roomCode));
+            if (eliminatedRole && eliminatedRole.role === "Chasseur") {
+                io.to(roomCode).emit("chasseurTurn", { eliminated });
+            } else {
+                // Passer au tour suivant
                nextTurn(roomCode);
-            // }
+            }
             
             checkVictory(roomCode);
         }
@@ -290,13 +287,13 @@ io.on('connection', (socket) => {
             eliminatedPlayers.get(roomCode).add(eliminated);
             loupVotes.delete(roomCode);
             
-            // // Vérifier si le joueur éliminé est un Chasseur
-            // const eliminatedRole = getPlayerRole(eliminated, rolesAssignments.get(roomCode));
-            // if (eliminatedRole && eliminatedRole.role === "Chasseur") {
-            //     io.to(roomCode).emit("chasseurTurn", { eliminated });
-            // } else {
+            // Vérifier si le joueur éliminé est un Chasseur
+            const eliminatedRole = getPlayerRole(eliminated, rolesAssignments.get(roomCode));
+            if (eliminatedRole && eliminatedRole.role === "Chasseur") {
+                io.to(roomCode).emit("chasseurTurn", { eliminated });
+            } else {
                 nextTurn(roomCode);
-            // }
+            }
             checkVictory(roomCode);
 
         }
@@ -332,6 +329,19 @@ io.on('connection', (socket) => {
         
         nextTurn(roomCode);
       });
+
+    socket.on("chasseurAction", ({ roomCode, target }) => {
+        if (target) {
+            if (!eliminatedPlayers.has(roomCode)) {
+                eliminatedPlayers.set(roomCode, new Set());
+            }
+            eliminatedPlayers.get(roomCode).add(target);
+            io.to(roomCode).emit("playerEliminated", target);
+            checkVictory(roomCode);
+        }
+        nextTurn(roomCode);
+    });
+    
     socket.on('leaveRoom', ({ username, room }) => {
         if (rooms.has(room)) {
             rooms.get(room).delete(username);
