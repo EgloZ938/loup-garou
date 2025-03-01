@@ -19,7 +19,10 @@ const MIN_PLAYERS = 6;
 const rooms = new Map();
 const roomCreators = new Map();
 const gameStatus = new Map();
+const votes = new Map();
+const loupVotes = new Map();
 const rolesAssignments = new Map();
+const eliminatedPlayers = new Map();
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -48,6 +51,49 @@ async function assignRoles(players) {
         return null;
     }
 }
+
+function getPlayerRole(player, completion) {
+    const foundPlayer = completion.players.find(p => p.pseudo === player);
+    return foundPlayer ? foundPlayer : null;
+}
+
+
+const getWerewolves = (roomCode) => {
+    const assignments = rolesAssignments.get(roomCode);
+    if (!assignments || !assignments.players) return [];
+    return assignments.players
+              .filter(player => player.camp === "Loups-Garous")
+              .map(player => player.pseudo);
+};
+
+const checkVictory = (roomCode) => {
+    if (!rooms.has(roomCode)) return;
+
+    const alivePlayers = new Set(rooms.get(roomCode));
+    if (eliminatedPlayers.has(roomCode)) {
+        eliminatedPlayers.get(roomCode).forEach(player => alivePlayers.delete(player));
+    }
+
+    const completion = rolesAssignments.get(roomCode);
+    if (!completion) return;
+
+    const aliveRoles = [...alivePlayers].map(player => getPlayerRole(player, completion));
+
+    const allWerewolves = aliveRoles.every(role => role?.camp === 'Loups-Garous');
+    const allVillagers = aliveRoles.every(role => role?.camp === 'Villageois');
+
+    if (allWerewolves) {
+        io.to(roomCode).emit("gameOver", { winner: "Loups-Garous" });
+        gameStatus.set(roomCode, false);
+        console.log("victoire LOUP");
+    } else if (allVillagers) {
+        io.to(roomCode).emit("gameOver", { winner: "Villageois" });
+        gameStatus.set(roomCode, false);
+        console.log("victoire village");
+    }
+};
+
+
 
 io.on('connection', (socket) => {
     console.log('Un utilisateur s\'est connecté');
@@ -144,6 +190,66 @@ io.on('connection', (socket) => {
                     io.to(roomCode).emit('systemMessage', 'Erreur lors du lancement de la partie');
                 }
             }
+        }
+    });
+
+    socket.on('voteVillage', ({ roomCode, votedPlayer }) => {
+        console.log(votes);
+        if (!rooms.has(roomCode) || !gameStatus.get(roomCode)) return;
+        
+        if (!votes.has(roomCode)) {
+            votes.set(roomCode, new Map());
+        }
+        const voteMap = votes.get(roomCode);
+        voteMap.set(socket.id, votedPlayer);
+        
+        const alivePlayers = new Set(rooms.get(roomCode));
+        if (eliminatedPlayers.has(roomCode)) {
+            eliminatedPlayers.get(roomCode).forEach(player => alivePlayers.delete(player));
+        }
+        
+        io.to(roomCode).emit('updateVotes', Array.from(voteMap.values()));
+    
+        if (voteMap.size === alivePlayers.size) {
+            const counts = {};
+            voteMap.forEach(v => counts[v] = (counts[v] || 0) + 1);
+            const eliminated = Object.keys(counts).reduce((a, b) => counts[a] >= counts[b] ? a : b);
+            io.to(roomCode).emit('playerEliminated', eliminated);
+    
+            if (!eliminatedPlayers.has(roomCode)) {
+                eliminatedPlayers.set(roomCode, new Set());
+            }
+            eliminatedPlayers.get(roomCode).add(eliminated);
+    
+            votes.delete(roomCode);
+        }
+    
+        console.log(votes);
+        checkVictory(roomCode);
+    });
+    
+    
+    socket.on('voteLoups', ({ roomCode, votedPlayer }) => {
+        if (!rooms.has(roomCode) || !gameStatus.get(roomCode)) return;
+        if (!loupVotes.has(roomCode)) {
+            loupVotes.set(roomCode, new Map());
+        }
+        const voteMap = loupVotes.get(roomCode);
+        voteMap.set(socket.id, votedPlayer);
+        
+        const werewolves = getWerewolves(roomCode);
+        if (voteMap.size === werewolves.length) {
+            const counts = {};
+            voteMap.forEach(v => counts[v] = (counts[v] || 0) + 1);
+            const eliminated = Object.keys(counts).reduce((a, b) => counts[a] >= counts[b] ? a : b);
+            io.to(roomCode).emit('playerEliminated', eliminated);
+            if (!eliminatedPlayers.has(roomCode)) {
+                eliminatedPlayers.set(roomCode, new Set());
+            }
+            eliminatedPlayers.get(roomCode).add(eliminated);
+            loupVotes.delete(roomCode);
+            checkVictory(roomCode);
+
         }
     });
 

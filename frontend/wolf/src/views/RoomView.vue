@@ -201,11 +201,14 @@
         <!-- Zone centrale - Cercle des joueurs -->
         <div
           class="lg:col-span-4 backdrop-blur-sm bg-purple-900/10 border border-purple-500/20 rounded-xl flex flex-col min-h-0 relative">
-          <h3 class="text-xl font-bold text-purple-400 mb-4 absolute top-6 left-6">Village</h3>
+          <h3 class="text-xl font-bold text-purple-400 mb-4 absolute top-6 left-6">
+            {{ isNight ? "Nuit" : "Village" }}
+          </h3>
+          <div v-if="isNight" class="absolute inset-0 bg-black opacity-60 z-10 pointer-events-none"></div>
 
           <!-- Cercle des joueurs -->
           <div class="flex-1 relative" style="min-height: 700px;">
-            <div class="absolute inset-0 flex items-center justify-center">
+            <div class="absolute inset-0 flex items-center justify-center z-20">
               <!-- Cercle de fond -->
               <div class="rounded-full border border-purple-500/20 relative" style="height: 95%; width: 70%;">
 
@@ -215,10 +218,14 @@
                   left: `${50 + 42 * Math.cos(2 * Math.PI * index / connectedUsers.length)}%`,
                   transform: 'translate(-50%, -50%)'
                 }">
-                  <div class="flex flex-col items-center justify-center">
+                  <div class="flex flex-col items-center justify-center" 
+                      @click="!eliminatedPlayers.includes(user) && handlePlayerClick(user)"
+                      :class="{ 'pointer-events-none': eliminatedPlayers.includes(user) }">
                     <!-- Avatar avec indication de rôle (si visible) -->
                     <div class="relative">
-                      <img src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
+                      <!-- Avatar normal ou rôle grisé si éliminé -->
+                      <img v-if="!eliminatedPlayers.includes(user)"
+                        src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
                         class="w-20 h-20 rounded-full border-2 transition-transform hover:scale-110 duration-300"
                         :class="{
                           'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
@@ -226,9 +233,14 @@
                           'border-purple-400': user === socketStore.username
                         }">
 
+                      <img v-else
+                        :src="getPlayerRoleDetails(user)?.icon"
+                        :alt="getPlayerRole(user)?.role"
+                        class="w-20 h-20 rounded-full border-2 grayscale opacity-50">
+
                       <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
                       <div
-                        v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username))"
+                        v-if="(user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username))) && !eliminatedPlayers.includes(user)"
                         class="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-2" :class="{
                           'border-red-400 bg-red-900/50': isWerewolf(user),
                           'border-blue-400 bg-blue-900/50': getPlayerRole(user)?.camp === 'Villageois',
@@ -242,7 +254,8 @@
                     <!-- Nom du joueur -->
                     <span class="mt-2 text-base font-medium" :class="{
                       'text-gray-300': user !== socketStore.username,
-                      'text-purple-400': user === socketStore.username
+                      'text-purple-400': user === socketStore.username,
+                      'opacity-50': eliminatedPlayers.includes(user)
                     }">{{ user }}</span>
                   </div>
                 </div>
@@ -458,6 +471,9 @@ export default {
     const error = ref("");
     const showRoleModal = ref(false);
     const showChatModal = ref(false);
+    const voted = ref(false);
+    const isNight = ref(false);
+    const eliminatedPlayers = ref([]);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -539,6 +555,46 @@ export default {
         }
       }, 1000);
     };
+
+    const voteVillage = (user) => {      
+      console.log("vote village", user)
+
+      socketStore.socket.emit("voteVillage", { roomCode: props.roomCode, votedPlayer: user });
+      voted.value = true;
+    };
+
+    const voteLoups = (user) => {
+      console.log("voteloup", user)
+      socketStore.socket.emit("voteLoups", { roomCode: props.roomCode, votedPlayer: user });
+      voted.value = true;
+    };
+
+    const handlePlayerClick = (user) => {
+      if (voted.value || eliminatedPlayers.value.includes(socketStore.username)) return;
+
+      if (isNight.value) {
+        if (isWerewolf(socketStore.username)) {
+          voteLoups(user);
+        }
+      } else {
+        voteVillage(user);
+      }
+    };
+
+
+    socketStore.socket.on("playerEliminated", (player) => {
+      if (!eliminatedPlayers.value.includes(player)) {
+        eliminatedPlayers.value.push(player);
+      }
+
+      voted.value = false;
+      isNight.value = !isNight.value;
+
+      if (player === socketStore.username) {
+        alert("Vous avez été éliminé !");
+      }
+    });
+
 
     const roleDetails = computed(() => {
       if (currentPlayerRole.value?.role) {
@@ -787,6 +843,11 @@ export default {
       isWerewolf,
       getPlayerRole,
       getPlayerRoleDetails,
+      isNight,
+      eliminatedPlayers,
+      voteVillage,
+      voteLoups,
+      handlePlayerClick
     };
   },
 };
