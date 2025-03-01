@@ -193,6 +193,13 @@
                       d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5ZM19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
                   </svg>
                 </div>
+                <!-- Voyante : affichage du rôle mais dans la liste à gauche -->
+                <div v-if="revealedRoles[user]" class="flex items-center gap-2">
+                  <img :src="getPlayerRoleDetails(user)?.icon" 
+                      :alt="getPlayerRole(user)?.role" 
+                      class="w-6 h-6 rounded-full">
+                  <span class="text-sm text-gray-400">{{ getPlayerRole(user)?.role }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -223,8 +230,15 @@
                       :class="{ 'pointer-events-none': eliminatedPlayers.includes(user) }">
                     <!-- Avatar avec indication de rôle (si visible) -->
                     <div class="relative">
-                      <!-- Avatar normal ou rôle grisé si éliminé -->
-                      <img v-if="!eliminatedPlayers.includes(user)"
+                      <img
+                        v-if="revealedRoles[user]"
+                        :src="getPlayerRoleDetails(user)?.icon"
+                        :alt="getPlayerRole(user)?.role"
+                        class="w-20 h-20 rounded-full border-2"
+                        :class="{'grayscale opacity-50': eliminatedPlayers.includes(user)}"
+                        :title="getPlayerRole(user)?.role"
+                      />
+                      <img v-else-if="!eliminatedPlayers.includes(user)"
                         src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
                         class="w-20 h-20 rounded-full border-2 transition-transform hover:scale-110 duration-300"
                         :class="{
@@ -475,6 +489,7 @@ export default {
     const isNight = ref(false);
     const eliminatedPlayers = ref([]);
     const currentTurn = ref("");
+    const revealedRoles = ref({});
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -570,9 +585,16 @@ export default {
       voted.value = true;
     };
 
+    const handleVoyanteClick = (user) => {
+      socketStore.socket.emit("voyanteAction", { roomCode: props.roomCode, target: user });
+    };
+
     const handlePlayerClick = (user) => {
       if (voted.value || eliminatedPlayers.value.includes(socketStore.username)) return;
-
+      if (currentTurn.value === "Voyante" && currentPlayerRole.value?.role === "Voyante") {
+        handleVoyanteClick(user);
+        return;
+      }
       if (isNight.value) {
         if (isWerewolf(socketStore.username)) {
           voteLoups(user);
@@ -600,6 +622,14 @@ export default {
       currentTurn.value = turn;
       console.log("Nouveau tour :", turn);
     });
+    socketStore.socket.on("voyanteResult", ({ target, role, camp }) => {
+      // On peut mettre à jour revealedRoles pour le joueur ciblé
+      revealedRoles.value[target] = true;
+      console.log(`Le rôle de ${target} est ${role} (${camp})`);
+      // Vous pouvez aussi afficher une notification ou mettre à jour l'interface
+    });
+
+
     socketStore.socket.on("gameOver", ({ winner }) => {
       alert(`Game over! Winner: ${winner}`);
     });
@@ -859,6 +889,7 @@ export default {
       voteLoups,
       handlePlayerClick,
       currentTurn,
+      revealedRoles
     };
   },
 };

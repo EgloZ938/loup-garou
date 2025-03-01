@@ -58,10 +58,10 @@ function computeTurnOrder(roomCode) {
     const assignments = rolesAssignments.get(roomCode);
     if (!assignments) return ["Village"];
     const players = assignments.players;
-    // const hasVoyante = players.some(p => p.role === "Voyante");
+    const hasVoyante = players.some(p => p.role === "Voyante");
     // const hasSorciere = players.some(p => p.role === "Sorcière");
     const order = ["Village"];
-    // if (hasVoyante) order.push("Voyante");
+    if (hasVoyante) order.push("Voyante");
     order.push("Loups");
     // if (hasSorciere) order.push("Sorcière");
     return order;
@@ -301,7 +301,37 @@ io.on('connection', (socket) => {
 
         }
     });
-
+    
+    socket.on("voyanteAction", ({ roomCode, target }) => {
+        // Récupère le pseudo du joueur qui envoie l'action
+        const sender = socket.handshake.auth.username;
+        // Récupère l'attribution des rôles pour la room
+        const roleAssignments = rolesAssignments.get(roomCode);
+        if (!roleAssignments) {
+          console.error("Aucune attribution de rôles pour la room", roomCode);
+          return;
+        }
+        // Vérifie que le joueur émetteur est bien une Voyante
+        const senderRole = getPlayerRole(sender, roleAssignments);
+        if (!senderRole || senderRole.role !== "Voyante") {
+          console.error("Le joueur qui a envoyé voyanteAction n'est pas une Voyante");
+          return;
+        }
+        // Récupère le rôle du joueur cible
+        const targetRole = getPlayerRole(target, roleAssignments);
+        if (!targetRole) {
+          console.error("Le joueur cible n'existe pas ou n'a pas de rôle assigné");
+          return;
+        }
+        // Envoie le résultat uniquement à la Voyante (le sender)
+        socket.emit("voyanteResult", { 
+          target, 
+          role: targetRole.role, 
+          camp: targetRole.camp 
+        });
+        
+        nextTurn(roomCode);
+      });
     socket.on('leaveRoom', ({ username, room }) => {
         if (rooms.has(room)) {
             rooms.get(room).delete(username);
