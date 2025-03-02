@@ -20,6 +20,7 @@ const MIN_PLAYERS = 6;
 const rooms = new Map();
 const roomCreators = new Map();
 const gameStatus = new Map();
+const gameReadyPlayers = new Map();
 
 const gameManager = new GameManager();
 
@@ -112,6 +113,84 @@ async function assignRoles(players) {
     }
 }
 
+function assignRolesAlgorithm(players) {
+    // Crée une copie mélangée des joueurs
+    const shuffledPlayers = shuffleArray([...players]);
+    const playerCount = players.length;
+    const roles = [];
+
+    // Déterminer le nombre de loups-garous en fonction du nombre de joueurs
+    let werewolfCount;
+    let includeInfectFatherOfWerewolves = false;
+
+    if (playerCount < 8) {
+        werewolfCount = 2;
+    } else if (playerCount < 12) {
+        werewolfCount = 2;
+        // 30% de chance d'avoir l'Infect Père des Loups à la place d'un Loup-Garou normal
+        includeInfectFatherOfWerewolves = Math.random() < 0.3;
+    } else if (playerCount < 16) {
+        werewolfCount = 3;
+        // 50% de chance d'avoir l'Infect Père des Loups à la place d'un Loup-Garou normal
+        includeInfectFatherOfWerewolves = Math.random() < 0.5;
+    } else {
+        werewolfCount = 4;
+        // 70% de chance d'avoir l'Infect Père des Loups à la place d'un Loup-Garou normal
+        includeInfectFatherOfWerewolves = Math.random() < 0.7;
+    }
+
+    // Rôles obligatoires (toujours présents)
+    const mandatoryRoles = ['Voyante', 'Sorcière'];
+
+    // Rôles additionnels pour les parties plus grandes
+    const additionalRoles = [
+        'Chasseur',
+        'Cupidon',
+        'Salvateur',
+        ...(playerCount >= 8 ? ['Ancien', 'Bouc Émissaire', 'Renard', 'Corbeau'] : []),
+        ...(playerCount >= 10 ? ['Joueur de Flûte'] : [])
+    ];
+
+    // Mélanger les rôles additionnels
+    shuffleArray(additionalRoles);
+
+    // Calculer combien de rôles additionnels on peut inclure
+    // (en gardant un certain nombre de simples villageois pour l'équilibre)
+    const minVillageois = Math.max(Math.floor(playerCount * 0.3), 1); // Au moins 30% de simples villageois
+    const maxAdditionalRoles = playerCount - werewolfCount - mandatoryRoles.length - minVillageois;
+    const selectedAdditionalRoles = additionalRoles.slice(0, Math.min(maxAdditionalRoles, additionalRoles.length));
+
+    // Construction de la liste finale des rôles
+    const finalRoles = [
+        ...Array(includeInfectFatherOfWerewolves ? werewolfCount - 1 : werewolfCount).fill('Loup-Garou'),
+        ...(includeInfectFatherOfWerewolves ? ['Infect Père des Loups'] : []),
+        ...mandatoryRoles,
+        ...selectedAdditionalRoles,
+    ];
+
+    // Compléter avec des Villageois jusqu'à avoir le bon nombre
+    while (finalRoles.length < playerCount) {
+        finalRoles.push('Villageois');
+    }
+
+    // Mélanger tous les rôles
+    shuffleArray(finalRoles);
+
+    // Assigner les rôles aux joueurs
+    const result = {
+        players: shuffledPlayers.map((player, index) => {
+            const role = finalRoles[index];
+            const camp = (role === 'Loup-Garou' || role === 'Infect Père des Loups')
+                ? 'Loups-Garous'
+                : (role === 'Joueur de Flûte' ? 'Neutre' : 'Villageois');
+
+            return { pseudo: player, role, camp };
+        })
+    };
+
+    return JSON.stringify(result);
+}
+
 io.on('connection', (socket) => {
     console.log('Un utilisateur s\'est connecté');
 
@@ -201,7 +280,7 @@ io.on('connection', (socket) => {
             if (currentPlayers.length >= MIN_PLAYERS) {
                 io.to(roomCode).emit('startCountdown');
                 try {
-                    const roleAssignments = await assignRoles(currentPlayers);
+                    const roleAssignments = assignRolesAlgorithm(currentPlayers);
                     if (roleAssignments) {
                         // Nettoyage supplémentaire de la réponse
                         const cleanedResponse = roleAssignments
@@ -306,6 +385,57 @@ io.on('connection', (socket) => {
                     requestBy: currentUser,
                     creator: creator
                 });
+            }
+        }
+    });
+
+
+    socket.on('castVote', ({ room, voter, votedFor }) => {
+        if (rooms.has(room)) {
+            const game = gameManager.getGame(room);
+
+            if (game && game.currentPhase === 'vote') {
+                const result = game.processVote(voter, votedFor);
+
+                if (!result.success) {
+                    // Envoyer un message d'erreur au client qui a tenté de voter
+                    socket.emit('voteError', { message: result.message });
+                }
+            } else {
+                socket.emit('voteError', { message: "Vous ne pouvez voter que pendant la phase de vote" });
+            }
+        }
+    });
+
+    // Dans la partie socket.io du serveur
+    socket.on('playerReady', (roomCode) => {
+        const username = socket.handshake.auth?.username;
+
+        if (!username || !rooms.has(roomCode)) return;
+
+        // Stocker les joueurs prêts (si pas encore initialisé)
+        if (!gameReadyPlayers.has(roomCode)) {
+            gameReadyPlayers.set(roomCode, new Set());
+        }
+
+        // Ajouter ce joueur aux joueurs prêts
+        gameReadyPlayers.get(roomCode).add(username);
+
+        // Vérifier si tous les joueurs sont prêts
+        const readyPlayers = gameReadyPlayers.get(roomCode).size;
+        const totalPlayers = rooms.get(roomCode).size;
+
+        if (readyPlayers === totalPlayers) {
+            // Tous les joueurs ont vu leur rôle, on peut commencer la phase de nuit
+            const game = gameManager.getGame(roomCode);
+            if (game) {
+                // Supprimer la liste des joueurs prêts pour cette room
+                gameReadyPlayers.delete(roomCode);
+
+                // Démarrer le cycle de jeu (phase de nuit)
+                setTimeout(() => {
+                    game.startGameCycle();
+                }, 1000); // Petit délai pour s'assurer que l'UI a bien eu le temps de se mettre en place
             }
         }
     });

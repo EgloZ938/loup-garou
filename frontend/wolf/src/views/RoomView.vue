@@ -216,7 +216,7 @@
           }">
           <h3 class="text-xl font-bold text-purple-400 mb-4 absolute top-6 left-6">Village</h3>
 
-          <div v-if="gameStarted && (gamePhase === 'day' || gamePhase === 'night')"
+          <div v-if="gameStarted && (gamePhase === 'day' || gamePhase === 'night' || gamePhase === 'vote')"
             class="absolute top-6 right-6 flex items-center gap-4">
             <!-- Indicateur de phase -->
             <div class="flex items-center gap-2">
@@ -229,26 +229,50 @@
                 </svg>
                 <span class="text-yellow-400 text-lg font-semibold ml-1">Jour</span>
               </div>
-              <div v-else class="flex items-center">
+              <div v-else-if="gamePhase === 'night'" class="flex items-center">
                 <svg class="w-7 h-7 text-blue-400" fill="currentColor" viewBox="0 0 20 20"
                   xmlns="http://www.w3.org/2000/svg">
                   <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
                 </svg>
                 <span class="text-blue-400 text-lg font-semibold ml-1">Nuit</span>
               </div>
+              <div v-else-if="gamePhase === 'vote'" class="flex items-center">
+                <svg class="w-7 h-7 text-purple-400" fill="currentColor" viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 005 10a6 6 0 0012 0c0-.35-.035-.691-.1-1.021A5 5 0 0010 11z"
+                    clip-rule="evenodd"></path>
+                </svg>
+                <span class="text-purple-400 text-lg font-semibold ml-1">Vote</span>
+              </div>
             </div>
 
             <!-- Timer -->
             <div
               class="backdrop-blur-sm bg-purple-900/30 border border-purple-500/30 rounded-full px-5 py-2 flex items-center">
-              <svg class="w-5 h-5 mr-2" :class="gamePhase === 'day' ? 'text-yellow-400' : 'text-blue-400'" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg class="w-5 h-5 mr-2" :class="{
+                'text-yellow-400': gamePhase === 'day',
+                'text-blue-400': gamePhase === 'night',
+                'text-purple-400': gamePhase === 'vote'
+              }" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              <span class="text-xl font-bold" :class="gamePhase === 'day' ? 'text-yellow-400' : 'text-blue-400'">
+              <span class="text-xl font-bold" :class="{
+                'text-yellow-400': gamePhase === 'day',
+                'text-blue-400': gamePhase === 'night',
+                'text-purple-400': gamePhase === 'vote'
+              }">
                 {{ clientTimer }}s
               </span>
+            </div>
+
+            <div v-if="gamePhase === 'vote'"
+              class="absolute top-20 left-0 right-0 mx-auto text-center bg-purple-900/50 backdrop-blur-sm border border-purple-500/40 py-3 px-6 rounded-lg max-w-lg shadow-lg">
+              <p class="text-purple-200 font-semibold">Cliquez sur l'avatar d'un joueur pour voter contre lui</p>
+              <p v-if="currentVote" class="text-purple-300 text-sm mt-1">
+                Votre vote actuel: <span class="font-semibold">{{ currentVote }}</span>
+              </p>
             </div>
           </div>
 
@@ -265,15 +289,30 @@
                   transform: 'translate(-50%, -50%)'
                 }">
                   <div class="flex flex-col items-center justify-center">
-                    <!-- Avatar avec indication de rôle (si visible) -->
+                    <!-- Avatar avec indication de rôle et possibilité de vote -->
                     <div class="relative">
                       <img src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
-                        class="w-20 h-20 rounded-full border-2 transition-transform hover:scale-110 duration-300"
-                        :class="{
+                        class="w-20 h-20 rounded-full border-2 transition-transform duration-300" :class="{
                           'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
                           'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username)),
-                          'border-purple-400': user === socketStore.username
-                        }">
+                          'border-purple-400': user === socketStore.username,
+                          'opacity-50 grayscale cursor-not-allowed': deadPlayers.includes(user),
+                          'cursor-pointer hover:scale-110 hover:border-white hover:border-opacity-70': gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username,
+                          'hover:scale-105': gamePhase !== 'vote' && !deadPlayers.includes(user)
+                        }"
+                        @click="gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username ? voteForPlayer(user) : null">
+
+                      <!-- Indicateur de vote -->
+                      <div v-if="gamePhase === 'vote' && getVotesForPlayer(user) > 0"
+                        class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-red-700 animate-pulse">
+                        {{ getVotesForPlayer(user) }}
+                      </div>
+
+                      <!-- Indicateur de vote actuel de l'utilisateur -->
+                      <div v-if="gamePhase === 'vote' && currentVote === user"
+                        class="absolute -top-2 -left-2 bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-lg border border-purple-700">
+                        Votre vote
+                      </div>
 
                       <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
                       <div
@@ -281,17 +320,38 @@
                         class="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-2" :class="{
                           'border-red-400 bg-red-900/50': isWerewolf(user),
                           'border-blue-400 bg-blue-900/50': getPlayerRole(user)?.camp === 'Villageois',
-                          'border-yellow-400 bg-yellow-900/50': getPlayerRole(user)?.camp === 'Neutre'
+                          'border-yellow-400 bg-yellow-900/50': getPlayerRole(user)?.camp === 'Neutre',
+                          'opacity-75': deadPlayers.includes(user)
                         }">
                         <img v-if="getPlayerRoleDetails(user)" :src="getPlayerRoleDetails(user)?.icon"
                           :alt="getPlayerRole(user)?.role" class="w-full h-full rounded-full">
+                      </div>
+
+                      <!-- Indicateur de mort -->
+                      <div v-if="deadPlayers.includes(user)" class="absolute inset-0 flex items-center justify-center">
+                        <!-- Première série de griffures (3 traits) -->
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 translate-y-2 shadow-lg shadow-red-900/50"></div>
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 shadow-lg shadow-red-900/50"></div>
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 -translate-y-2 shadow-lg shadow-red-900/50"></div>
+                        
+                        <!-- Deuxième série de griffures (croisant les premières) -->
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 translate-y-2 shadow-lg shadow-red-900/50"></div>
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 shadow-lg shadow-red-900/50"></div>
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 -translate-y-2 shadow-lg shadow-red-900/50"></div>
+                        
+                        <!-- Gouttes de sang aux extrémités -->
+                        <div class="absolute top-3 left-3 w-1 h-1 rounded-full bg-red-600 animate-pulse"></div>
+                        <div class="absolute top-3 right-3 w-1 h-1 rounded-full bg-red-600 animate-pulse"></div>
+                        <div class="absolute bottom-3 left-3 w-1 h-1 rounded-full bg-red-600 animate-pulse"></div>
+                        <div class="absolute bottom-3 right-3 w-1.5 h-1.5 rounded-full bg-red-700 animate-pulse"></div>
                       </div>
                     </div>
 
                     <!-- Nom du joueur -->
                     <span class="mt-2 text-base font-medium" :class="{
                       'text-gray-300': user !== socketStore.username,
-                      'text-purple-400': user === socketStore.username
+                      'text-purple-400': user === socketStore.username,
+                      'line-through text-gray-500': deadPlayers.includes(user)
                     }">{{ user }}</span>
                   </div>
                 </div>
@@ -461,7 +521,7 @@
       <!-- Transition de phase jour/nuit -->
       <div v-if="showPhaseTransition"
         class="fixed inset-0 flex items-center justify-center z-50 transition-all duration-1000"
-        :class="transitionText.includes('nuit') ? 'bg-blue-950/80' : 'bg-amber-800/70'">
+        :class="transitionText.includes('nuit') ? 'bg-black/90 backdrop-blur-md' : 'bg-black/90 backdrop-blur-md'">
         <div class="text-center transform scale-100 opacity-100 transition-all duration-1000 max-w-4xl">
           <div class="flex justify-center mb-8">
             <div v-if="transitionText.includes('nuit')" class="animate-pulse">
@@ -480,7 +540,7 @@
             </div>
           </div>
           <div class="text-5xl font-bold mb-4"
-            :class="transitionText.includes('nuit') ? 'text-blue-100' : 'text-yellow-100'">
+            :class="transitionText.includes('nuit') ? 'text-blue-300' : 'text-purple-300'">
             {{ transitionText }}
           </div>
           <p class="text-xl text-gray-300 max-w-xl mx-auto" v-if="transitionText.includes('nuit')">
@@ -489,6 +549,109 @@
           <p class="text-xl text-gray-300 max-w-xl mx-auto" v-else>
             Le village se réveille et découvre ce qu'il s'est passé cette nuit...
           </p>
+        </div>
+      </div>
+
+      <!-- Annonce du résultat du vote -->
+      <div v-if="gamePhase === 'announce' && showAnnounceScreen"
+        class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-40">
+        <div class="text-center max-w-xl">
+          <div v-if="dayVictim" class="space-y-8">
+            <!-- Annonce de la personne éliminée avec son avatar -->
+            <h2 class="text-5xl font-bold text-red-400 mb-6">Élimination</h2>
+
+            <!-- Avatar du mort avec marques de griffures sanglantes -->
+            <div class="relative mx-auto w-40 h-40 mb-4">
+              <img src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
+                class="w-40 h-40 rounded-full border-4 border-red-600 grayscale opacity-80">
+
+              <!-- Griffures sanglantes -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <!-- Première série de griffures (3 traits) -->
+                <div
+                  class="absolute h-0.5 w-36 bg-red-600 transform rotate-45 translate-y-4 shadow-lg shadow-red-900/50">
+                </div>
+                <div class="absolute h-0.5 w-36 bg-red-600 transform rotate-45 shadow-lg shadow-red-900/50"></div>
+                <div
+                  class="absolute h-0.5 w-36 bg-red-600 transform rotate-45 -translate-y-4 shadow-lg shadow-red-900/50">
+                </div>
+
+                <!-- Deuxième série de griffures (croisant les premières) -->
+                <div
+                  class="absolute h-0.5 w-36 bg-red-600 transform -rotate-45 translate-y-4 shadow-lg shadow-red-900/50">
+                </div>
+                <div class="absolute h-0.5 w-36 bg-red-600 transform -rotate-45 shadow-lg shadow-red-900/50"></div>
+                <div
+                  class="absolute h-0.5 w-36 bg-red-600 transform -rotate-45 -translate-y-4 shadow-lg shadow-red-900/50">
+                </div>
+
+                <!-- Gouttes de sang aux extrémités -->
+                <div class="absolute top-6 left-6 w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+                <div class="absolute top-6 right-6 w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+                <div class="absolute bottom-6 left-6 w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
+                <div class="absolute bottom-6 right-6 w-3 h-3 rounded-full bg-red-700 animate-pulse"></div>
+              </div>
+            </div>
+
+            <!-- Nom du mort -->
+            <div class="text-4xl font-bold text-gray-300">
+              {{ dayVictim }} a été éliminé!
+            </div>
+
+            <!-- Révélation du rôle (avec animation) -->
+            <transition enter-active-class="transition duration-1000 transform" enter-from-class="opacity-0 scale-75"
+              enter-to-class="opacity-100 scale-100" appear>
+              <div v-if="showVictimRole && dayVictimRole" class="mt-10 space-y-4">
+                <!-- Titre de la révélation -->
+                <h3 class="text-2xl text-gray-400 mb-2">Révélation du rôle</h3>
+
+                <!-- Icône du rôle -->
+                <div class="relative inline-block mb-2" v-if="getVictimRoleDetails()">
+                  <div class="absolute -inset-2 rounded-full opacity-50" :class="{
+                    'bg-red-500/20 animate-pulse': dayVictimRole?.camp === 'Loups-Garous',
+                    'bg-blue-500/20 animate-pulse': dayVictimRole?.camp === 'Villageois',
+                    'bg-yellow-500/20 animate-pulse': dayVictimRole?.camp === 'Neutre'
+                  }"></div>
+                  <img :src="getVictimRoleDetails()?.icon" :alt="dayVictimRole?.role"
+                    class="w-24 h-24 mx-auto rounded-full border-4 relative" :class="{
+                      'border-red-400': dayVictimRole?.camp === 'Loups-Garous',
+                      'border-blue-400': dayVictimRole?.camp === 'Villageois',
+                      'border-yellow-400': dayVictimRole?.camp === 'Neutre'
+                    }">
+                </div>
+
+                <!-- Nom du rôle avec animation de texte -->
+                <div class="text-3xl font-bold animate-pulse" :class="{
+                  'text-red-400': dayVictimRole?.camp === 'Loups-Garous',
+                  'text-blue-400': dayVictimRole?.camp === 'Villageois',
+                  'text-yellow-400': dayVictimRole?.camp === 'Neutre'
+                }">
+                  {{ dayVictimRole?.role }}
+                </div>
+
+                <!-- Camp du joueur -->
+                <div class="mt-2 px-6 py-2 rounded-full inline-block" :class="{
+                  'bg-red-500/10 text-red-400': dayVictimRole?.camp === 'Loups-Garous',
+                  'bg-blue-500/10 text-blue-400': dayVictimRole?.camp === 'Villageois',
+                  'bg-yellow-500/10 text-yellow-400': dayVictimRole?.camp === 'Neutre'
+                }">
+                  {{ dayVictimRole?.camp }}
+                </div>
+              </div>
+            </transition>
+
+          </div>
+          <div v-else class="text-5xl font-bold text-gray-300 mb-6">
+            Personne n'a été éliminé.
+          </div>
+
+          <!-- Timer -->
+          <div class="text-xl text-gray-400 mt-10">
+            La nuit va bientôt tomber...
+          </div>
+          <div class="mt-4 text-lg text-gray-500">
+            {{ clientTimer }}s
+          </div>
         </div>
       </div>
     </div>
@@ -547,7 +710,13 @@ export default {
     const transitionText = ref('');
     const clientTimer = ref(0);
     const clientTimerInterval = ref(null);
-
+    const votes = ref([]);
+    const currentVote = ref(null);
+    const dayVictim = ref(null);
+    const dayVictimRole = ref(null);
+    const deadPlayers = ref([]);
+    const showVictimRole = ref(false);
+    const showAnnounceScreen = ref(false);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -621,30 +790,6 @@ export default {
       }
     };
 
-
-    const startCountdown = () => {
-      showCountdown.value = true;
-      countdown.value = 5;
-
-      const timer = setInterval(() => {
-        countdown.value--;
-        if (countdown.value === 0) {
-          clearInterval(timer);
-          showCountdown.value = false;
-
-          if (rolesData.value) {
-            showRoleReveal.value = true;
-            // On cache la révélation après 4 secondes
-            setTimeout(() => {
-              showRoleReveal.value = false;
-            }, 4000);
-          } else {
-            showLoader.value = true;
-          }
-        }
-      }, 1000);
-    };
-
     const roleDetails = computed(() => {
       if (currentPlayerRole.value?.role) {
         return rolesDataJSON[currentPlayerRole.value.role];
@@ -690,6 +835,32 @@ export default {
       }
     };
 
+    const voteForPlayer = (player) => {
+      if (gamePhase.value !== 'vote') return;
+      if (deadPlayers.value.includes(player)) return;
+      if (player === socketStore.username) return;
+
+      currentVote.value = player;
+
+      // Envoyer le vote au serveur
+      socketStore.socket.emit('castVote', {
+        room: props.roomCode,
+        voter: socketStore.username,
+        votedFor: player
+      });
+    };
+
+    // Fonction pour compter les votes pour un joueur
+    const getVotesForPlayer = (player) => {
+      return votes.value.filter(vote => vote.votedFor === player).length;
+    };
+
+    // Fonction pour obtenir les détails du rôle de la victime
+    const getVictimRoleDetails = () => {
+      if (!dayVictimRole.value?.role) return null;
+      return rolesDataJSON[dayVictimRole.value.role];
+    };
+
     onMounted(() => {
       window.addEventListener("beforeunload", handleBeforeUnload);
       socketStore.socket.emit("checkRoom", props.roomCode);
@@ -733,7 +904,6 @@ export default {
       });
 
       socketStore.socket.on('gameStatus', ({ started, roles }) => {
-        gameStarted.value = started;
         if (roles) {
           console.log('Rôles attribués:', roles);
           try {
@@ -745,8 +915,27 @@ export default {
             const playerData = parsedRoles.players.find(
               player => player.pseudo === socketStore.username
             );
+
             if (playerData) {
               currentPlayerRole.value = playerData;
+
+              // Si on était en train d'attendre les rôles (loader affiché)
+              if (showLoader.value) {
+                showLoader.value = false;
+
+                // Afficher la révélation du rôle
+                showRoleReveal.value = true;
+
+                // Après la révélation, on affiche l'interface de jeu
+                setTimeout(() => {
+                  showRoleReveal.value = false;
+                  // Interface de jeu affichée
+                  gameStarted.value = true;
+
+                  // Signaler au serveur qu'on est prêt pour la phase de nuit
+                  socketStore.socket.emit('playerReady', props.roomCode);
+                }, 4000);
+              }
             }
           } catch (error) {
             console.error('Erreur lors du traitement des rôles:', error);
@@ -771,10 +960,20 @@ export default {
             clearInterval(timer);
             showCountdown.value = false;
 
+            // Vérifier si on a déjà les rôles (peut arriver si le serveur est rapide)
             if (currentPlayerRole.value) {
+              // Révélation du rôle
               showRoleReveal.value = true;
+
+              // Après 4 secondes, cacher la révélation et lancer la partie
               setTimeout(() => {
                 showRoleReveal.value = false;
+
+                gameStarted.value = true;
+
+                // Signaler au serveur qu'on est prêt pour la phase de nuit
+                // Nouveau message pour dire qu'on est prêt à commencer la phase de jeu
+                socketStore.socket.emit('playerReady', props.roomCode);
               }, 4000);
             } else {
               showLoader.value = true;
@@ -783,14 +982,43 @@ export default {
         }, 1000);
       });
 
-      socketStore.socket.on('phaseChanged', ({ phase, timeLeft, turn }) => {
+      socketStore.socket.on('phaseChanged', ({ phase, timeLeft, turn, victim, deadPlayers: deadList }) => {
         // Animation de transition
         showPhaseTransition.value = true;
 
+        // Cacher l'écran d'annonce pendant la transition
+        showAnnounceScreen.value = false;
+
         if (phase === 'night') {
           transitionText.value = 'La nuit tombe sur le village...';
-        } else {
+        } else if (phase === 'day') {
           transitionText.value = `Le jour se lève sur le village (Jour ${turn})`;
+        } else if (phase === 'vote') {
+          transitionText.value = 'Le village doit voter!';
+        } else if (phase === 'announce') {
+          transitionText.value = 'Résultat du vote';
+
+          // Mise à jour de la victime
+          if (victim) {
+            dayVictim.value = victim;
+            // Trouver les informations de la victime
+            if (rolesData.value && rolesData.value.players) {
+              dayVictimRole.value = rolesData.value.players.find(
+                player => player.pseudo === victim
+              );
+
+              // Réinitialiser pour l'animation de révélation
+              showVictimRole.value = false;
+            }
+          } else {
+            dayVictim.value = null;
+            dayVictimRole.value = null;
+          }
+        }
+
+        // Mise à jour des joueurs morts
+        if (deadList) {
+          deadPlayers.value = deadList;
         }
 
         // Après 3 secondes, masque la transition et applique la nouvelle phase
@@ -798,6 +1026,35 @@ export default {
           gamePhase.value = phase;
           phaseTimer.value = timeLeft;
           showPhaseTransition.value = false;
+
+          // Afficher l'écran d'annonce seulement après la transition si on est en phase announce
+          if (phase === 'announce') {
+            showAnnounceScreen.value = true;
+
+            // Programmer l'animation de révélation du rôle
+            if (dayVictim.value) {
+              setTimeout(() => {
+                showVictimRole.value = true;
+              }, 2500);
+            }
+          }
+
+          // Réinitialiser les votes au début d'une nouvelle phase de vote
+          if (phase === 'vote') {
+            votes.value = [];
+            currentVote.value = null;
+          }
+        }, 3000);
+      });
+
+      socketStore.socket.on('voteUpdate', ({ votes: voteList }) => {
+        votes.value = voteList;
+      });
+
+      socketStore.socket.on('voteError', ({ message }) => {
+        error.value = message;
+        setTimeout(() => {
+          error.value = '';
         }, 3000);
       });
 
@@ -952,6 +1209,16 @@ export default {
       showPhaseTransition,
       transitionText,
       clientTimer,
+      votes,
+      currentVote,
+      dayVictim,
+      dayVictimRole,
+      deadPlayers,
+      voteForPlayer,
+      getVotesForPlayer,
+      showVictimRole,
+      getVictimRoleDetails,
+      showAnnounceScreen,
     };
   },
 };
