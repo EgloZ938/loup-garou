@@ -192,7 +192,11 @@
                   ? 'backdrop-blur-sm bg-purple-900/20 border border-purple-500/20'
                   : 'backdrop-blur-sm bg-gray-800/10 border border-gray-700/20'
               ]">
-                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <!-- Modifie cette ligne pour changer la couleur selon si le joueur est mort -->
+                <div class="w-2 h-2 rounded-full animate-pulse" :class="{
+                  'bg-green-500': !deadPlayers.includes(user),
+                  'bg-red-500': deadPlayers.includes(user)
+                }"></div>
                 <div class="flex items-center gap-2 flex-1">
                   <span class="text-gray-300">{{ user }}</span>
                   <!-- Couronne pour le créateur -->
@@ -330,15 +334,25 @@
                       <!-- Indicateur de mort -->
                       <div v-if="deadPlayers.includes(user)" class="absolute inset-0 flex items-center justify-center">
                         <!-- Première série de griffures (3 traits) -->
-                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 translate-y-2 shadow-lg shadow-red-900/50"></div>
-                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 shadow-lg shadow-red-900/50"></div>
-                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 -translate-y-2 shadow-lg shadow-red-900/50"></div>
-                        
+                        <div
+                          class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 translate-y-2 shadow-lg shadow-red-900/50">
+                        </div>
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 shadow-lg shadow-red-900/50">
+                        </div>
+                        <div
+                          class="absolute h-0.5 w-20 bg-red-600 transform rotate-45 -translate-y-2 shadow-lg shadow-red-900/50">
+                        </div>
+
                         <!-- Deuxième série de griffures (croisant les premières) -->
-                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 translate-y-2 shadow-lg shadow-red-900/50"></div>
-                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 shadow-lg shadow-red-900/50"></div>
-                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 -translate-y-2 shadow-lg shadow-red-900/50"></div>
-                        
+                        <div
+                          class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 translate-y-2 shadow-lg shadow-red-900/50">
+                        </div>
+                        <div class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 shadow-lg shadow-red-900/50">
+                        </div>
+                        <div
+                          class="absolute h-0.5 w-20 bg-red-600 transform -rotate-45 -translate-y-2 shadow-lg shadow-red-900/50">
+                        </div>
+
                         <!-- Gouttes de sang aux extrémités -->
                         <div class="absolute top-3 left-3 w-1 h-1 rounded-full bg-red-600 animate-pulse"></div>
                         <div class="absolute top-3 right-3 w-1 h-1 rounded-full bg-red-600 animate-pulse"></div>
