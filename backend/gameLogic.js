@@ -301,8 +301,14 @@ class Game {
             }
         }
 
-        // En cas d'égalité, choisir aléatoirement (ou implémenter une règle spécifique)
-        return victims.length > 0 ? victims[Math.floor(Math.random() * victims.length)] : null;
+        // Vérifier s'il y a une égalité
+        if (victims.length > 1) {
+            this.sendSystemMessage("Égalité des votes ! Personne ne sera éliminé.");
+            return null; // En cas d'égalité, personne n'est éliminé
+        }
+
+        // Si un seul joueur a le maximum de votes, il est éliminé
+        return victims.length === 1 ? victims[0] : null;
     }
 
     // Méthode pour récupérer le rôle d'un joueur

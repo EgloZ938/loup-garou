@@ -300,11 +300,11 @@
                           'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
                           'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username)),
                           'border-purple-400': user === socketStore.username,
-                          'opacity-50 grayscale cursor-not-allowed': deadPlayers.includes(user),
-                          'cursor-pointer hover:scale-110 hover:border-white hover:border-opacity-70': gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username,
+                          'opacity-50 grayscale cursor-not-allowed': deadPlayers.includes(user) || deadPlayers.includes(socketStore.username),
+                          'cursor-pointer hover:scale-110 hover:border-white hover:border-opacity-70': gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username && !deadPlayers.includes(socketStore.username),
                           'hover:scale-105': gamePhase !== 'vote' && !deadPlayers.includes(user)
                         }"
-                        @click="gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username ? voteForPlayer(user) : null">
+                        @click="gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username && !deadPlayers.includes(socketStore.username) ? voteForPlayer(user) : null">
 
                       <!-- Indicateur de vote -->
                       <div v-if="gamePhase === 'vote' && getVotesForPlayer(user) > 0"
@@ -320,7 +320,7 @@
 
                       <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
                       <div
-                        v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username))"
+                        v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username)) || deadPlayers.includes(user)"
                         class="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-2" :class="{
                           'border-red-400 bg-red-900/50': isWerewolf(user),
                           'border-blue-400 bg-blue-900/50': getPlayerRole(user)?.camp === 'Villageois',
@@ -535,13 +535,29 @@
       <!-- Transition de phase jour/nuit -->
       <div v-if="showPhaseTransition"
         class="fixed inset-0 flex items-center justify-center z-50 transition-all duration-1000"
-        :class="transitionText.includes('nuit') ? 'bg-black/90 backdrop-blur-md' : 'bg-black/90 backdrop-blur-md'">
+        :class="targetPhase === 'night' ? 'bg-black/90 backdrop-blur-md' : 'bg-black/90 backdrop-blur-md'">
         <div class="text-center transform scale-100 opacity-100 transition-all duration-1000 max-w-4xl">
           <div class="flex justify-center mb-8">
-            <div v-if="transitionText.includes('nuit')" class="animate-pulse">
+            <div v-if="targetPhase === 'night'" class="animate-pulse">
               <svg class="w-24 h-24 text-blue-200" fill="currentColor" viewBox="0 0 20 20"
                 xmlns="http://www.w3.org/2000/svg">
                 <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+              </svg>
+            </div>
+            <div v-else-if="targetPhase === 'vote'" class="animate-pulse">
+              <svg class="w-24 h-24 text-purple-200" fill="currentColor" viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 005 10a6 6 0 0012 0c0-.35-.035-.691-.1-1.021A5 5 0 0010 11z"
+                  clip-rule="evenodd"></path>
+              </svg>
+            </div>
+            <div v-else-if="targetPhase === 'announce'" class="animate-pulse">
+              <svg class="w-24 h-24 text-red-200" fill="currentColor" viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                  clip-rule="evenodd"></path>
               </svg>
             </div>
             <div v-else class="animate-pulse">
@@ -553,18 +569,29 @@
               </svg>
             </div>
           </div>
-          <div class="text-5xl font-bold mb-4"
-            :class="transitionText.includes('nuit') ? 'text-blue-300' : 'text-purple-300'">
+          <div class="text-5xl font-bold mb-4" :class="{
+            'text-blue-300': targetPhase === 'night',
+            'text-purple-300': targetPhase === 'vote',
+            'text-red-300': targetPhase === 'announce',
+            'text-yellow-300': targetPhase === 'day'
+          }">
             {{ transitionText }}
           </div>
-          <p class="text-xl text-gray-300 max-w-xl mx-auto" v-if="transitionText.includes('nuit')">
+          <p class="text-xl text-gray-300 max-w-xl mx-auto" v-if="targetPhase === 'night'">
             Les loups-garous se réveillent et partent à la chasse...
+          </p>
+          <p class="text-xl text-gray-300 max-w-xl mx-auto" v-else-if="targetPhase === 'vote'">
+            Le village doit désigner un coupable...
+          </p>
+          <p class="text-xl text-gray-300 max-w-xl mx-auto" v-else-if="targetPhase === 'announce'">
+            L'heure du jugement est venue...
           </p>
           <p class="text-xl text-gray-300 max-w-xl mx-auto" v-else>
             Le village se réveille et découvre ce qu'il s'est passé cette nuit...
           </p>
         </div>
       </div>
+
 
       <!-- Annonce du résultat du vote -->
       <div v-if="gamePhase === 'announce' && showAnnounceScreen"
@@ -609,7 +636,7 @@
 
             <!-- Nom du mort -->
             <div class="text-4xl font-bold text-gray-300">
-              {{ dayVictim }} a été éliminé!
+              {{ dayVictim }} a été éliminé par le village!
             </div>
 
             <!-- Révélation du rôle (avec animation) -->
@@ -718,7 +745,7 @@ export default {
     const error = ref("");
     const showRoleModal = ref(false);
     const showChatModal = ref(false);
-    const gamePhase = ref('waiting'); // 'waiting', 'day', 'night'
+    const gamePhase = ref('waiting');
     const phaseTimer = ref(0);
     const showPhaseTransition = ref(false);
     const transitionText = ref('');
@@ -731,6 +758,7 @@ export default {
     const deadPlayers = ref([]);
     const showVictimRole = ref(false);
     const showAnnounceScreen = ref(false);
+    const targetPhase = ref('waiting');
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -1003,6 +1031,9 @@ export default {
         // Cacher l'écran d'annonce pendant la transition
         showAnnounceScreen.value = false;
 
+        // Stocker la phase cible pour la transition
+        targetPhase.value = phase;
+
         if (phase === 'night') {
           transitionText.value = 'La nuit tombe sur le village...';
         } else if (phase === 'day') {
@@ -1233,6 +1264,7 @@ export default {
       showVictimRole,
       getVictimRoleDetails,
       showAnnounceScreen,
+      targetPhase,
     };
   },
 };
