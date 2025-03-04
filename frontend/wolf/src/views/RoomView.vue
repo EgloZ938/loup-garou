@@ -218,6 +218,15 @@
             'bg-purple-900/10 border border-purple-500/20': gamePhase !== 'night',
             'bg-blue-950/30 border border-blue-600/20': gamePhase === 'night'
           }">
+
+          <div class="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl">
+            <img :src="gamePhase !== 'night'
+              ? '/src/assets/images/roles/Village_Jour.jpeg'
+              : '/src/assets/images/roles/Village_Nuit.jpeg'"
+              class="min-w-full min-h-full object-cover transform -translate-y-12 rounded-xl"
+              alt="Village background" />
+          </div>
+
           <h3 class="text-xl font-bold text-purple-400 mb-4 absolute top-6 left-6">Village</h3>
 
           <div v-if="gameStarted && (gamePhase === 'day' || gamePhase === 'night' || gamePhase === 'vote')"
@@ -284,7 +293,7 @@
           <div class="flex-1 relative" style="min-height: 700px;">
             <div class="absolute inset-0 flex items-center justify-center">
               <!-- Cercle de fond -->
-              <div class="rounded-full border border-purple-500/20 relative" style="height: 95%; width: 70%;">
+              <div class="rounded-full relative" style="height: 95%; width: 70%;">
 
                 <!-- Joueurs positionnés en cercle -->
                 <div v-for="(user, index) in connectedUsers" :key="user" class="absolute" :style="{
@@ -362,8 +371,9 @@
                     </div>
 
                     <!-- Nom du joueur -->
-                    <span class="mt-2 text-base font-medium" :class="{
-                      'text-gray-300': user !== socketStore.username,
+                    <span class="mt-2 text-base font-medium drop-shadow-md" :class="{
+                      'text-purple-200': user !== socketStore.username,
+                      'text-purple-600': user === socketStore.username && gamePhase !== 'night',
                       'text-purple-400': user === socketStore.username,
                       'line-through text-gray-500': deadPlayers.includes(user)
                     }">{{ user }}</span>
