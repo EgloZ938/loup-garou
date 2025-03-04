@@ -32,6 +32,36 @@ function shuffleArray(array) {
     return array;
 }
 
+function createManualRoleAssignments(players, manualRoles) {
+    try {
+        // Mélanger les joueurs pour une attribution aléatoire
+        const shuffledPlayers = shuffleArray([...players]);
+
+        // Vérifier que nous avons le bon nombre de rôles
+        if (manualRoles.length !== players.length) {
+            console.error('Erreur: Le nombre de rôles ne correspond pas au nombre de joueurs');
+            return null;
+        }
+
+        // Mélanger les rôles également pour éviter les attributions prévisibles
+        const shuffledRoles = shuffleArray([...manualRoles]);
+
+        // Créer le tableau de résultats qui associe chaque joueur à un rôle
+        const result = {
+            players: shuffledPlayers.map((player, index) => ({
+                pseudo: player,
+                role: shuffledRoles[index].role,
+                camp: shuffledRoles[index].camp
+            }))
+        };
+
+        return JSON.stringify(result);
+    } catch (error) {
+        console.error('Erreur lors de la création des assignations de rôles manuelles:', error);
+        return null;
+    }
+}
+
 // Fonction pour obtenir les rôles via OpenAI
 async function assignRoles(players) {
     try {
@@ -274,13 +304,25 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('startGame', async (roomCode) => {
+    socket.on('startGame', async (roomCode, mode = 'auto', manualRoles = null) => {
         if (rooms.has(roomCode)) {
             const currentPlayers = Array.from(rooms.get(roomCode));
             if (currentPlayers.length >= MIN_PLAYERS) {
                 io.to(roomCode).emit('startCountdown');
                 try {
-                    const roleAssignments = assignRolesAlgorithm(currentPlayers);
+                    let roleAssignments;
+
+                    if (mode === 'auto') {
+                        // Utiliser l'algorithme existant d'équilibrage automatique
+                        roleAssignments = assignRolesAlgorithm(currentPlayers);
+                    } else if (mode === 'manual' && manualRoles) {
+                        // Utiliser les rôles sélectionnés manuellement
+                        roleAssignments = createManualRoleAssignments(currentPlayers, manualRoles);
+                    } else {
+                        // Fallback sur l'équilibrage automatique en cas de problème
+                        roleAssignments = assignRolesAlgorithm(currentPlayers);
+                    }
+
                     if (roleAssignments) {
                         // Nettoyage supplémentaire de la réponse
                         const cleanedResponse = roleAssignments

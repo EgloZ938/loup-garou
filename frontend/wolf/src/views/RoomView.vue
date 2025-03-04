@@ -710,6 +710,10 @@
     <!-- Modal de détail du rôle -->
     <RoleDetailModal v-if="showRoleModal" :show="showRoleModal" :role-name="currentPlayerRole?.role" :role="roleDetails"
       @close="showRoleModal = false" />
+
+    <RoleSelectionModal v-if="showRoleSelectionModal" :show="showRoleSelectionModal"
+      :player-count="connectedUsers.length" @close="showRoleSelectionModal = false"
+      @start-game-auto="startGameWithAutoBalance" @start-game-manual="startGameWithManualRoles" />
   </div>
 </template>
 
@@ -720,10 +724,12 @@ import { useRouter } from "vue-router";
 import { useSocketStore } from "../stores/socket";
 import { rolesDataJSON } from '@/data/rolesData';
 import RoleDetailModal from '@/components/RoleDetailModal.vue';
+import RoleSelectionModal from '@/components/RoleSelectionModal.vue';
 
 export default {
   components: {
-    RoleDetailModal
+    RoleDetailModal,
+    RoleSelectionModal
   },
   props: {
     roomCode: {
@@ -769,6 +775,7 @@ export default {
     const showVictimRole = ref(false);
     const showAnnounceScreen = ref(false);
     const targetPhase = ref('waiting');
+    const showRoleSelectionModal = ref(false);
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -808,8 +815,18 @@ export default {
 
     const startGame = () => {
       if (connectedUsers.value.length >= 6 && isRoomCreator(socketStore.username)) {
-        socketStore.socket.emit("startGame", props.roomCode);
+        showRoleSelectionModal.value = true;
       }
+    };
+
+    const startGameWithAutoBalance = () => {
+      showRoleSelectionModal.value = false;
+      socketStore.socket.emit("startGame", props.roomCode, "auto");
+    };
+
+    const startGameWithManualRoles = (selectedRoles) => {
+      showRoleSelectionModal.value = false;
+      socketStore.socket.emit("startGame", props.roomCode, "manual", selectedRoles);
     };
 
     const scrollToBottom = async () => {
@@ -1275,6 +1292,9 @@ export default {
       getVictimRoleDetails,
       showAnnounceScreen,
       targetPhase,
+      showRoleSelectionModal,
+      startGameWithAutoBalance,
+      startGameWithManualRoles,
     };
   },
 };
