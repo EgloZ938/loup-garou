@@ -4,6 +4,7 @@ class GameManager extends EventEmitter {
     constructor() {
         super();
         this.games = new Map(); // Stocke les instances de jeu par roomCode
+        this.playerSockets = new Map(); // Map pour stocker les socketId des joueurs par username
     }
 
     // Crée une nouvelle instance de jeu pour une room
@@ -32,6 +33,21 @@ class GameManager extends EventEmitter {
     getGame(roomCode) {
         return this.games.get(roomCode);
     }
+
+    // Ajoute un socket pour un joueur
+    addPlayerSocket(username, socketId) {
+        this.playerSockets.set(username, socketId);
+    }
+
+    // Récupère le socketId d'un joueur
+    getPlayerSocketId(username) {
+        return this.playerSockets.get(username);
+    }
+
+    // Supprime un socket pour un joueur
+    removePlayerSocket(username) {
+        this.playerSockets.delete(username);
+    }
 }
 
 class Game {
@@ -49,11 +65,25 @@ class Game {
         this.phaseTimer = null;
         this.playerRoles = null;
 
+        // Nouvelles propriétés pour les sous-phases de nuit
+        this.currentNightPhase = null; // 'cupidon', 'loupGarou', 'voyante', etc.
+        this.currentNightOrder = 0;
+        this.nightActionsCompleted = new Map(); // Stocke les actions nocturnes effectuées par rôle
+        this.cupidPlayed = false; // Si Cupidon a déjà joué (une seule fois par partie)
+        this.lovers = null; // Stocke les deux amoureux choisis par Cupidon
+
         // Durée des phases en secondes
         this.dayDuration = 30;
         this.voteDuration = 30;
         this.announceDuration = 10;
         this.nightDuration = 30;
+
+        // Durée des différentes sous-phases de nuit en secondes
+        this.cupidDuration = 30;
+        this.werewolvesDuration = 30;
+        this.seerDuration = 20;
+        this.witchDuration = 30;
+        // Ajoutez d'autres durées selon les rôles
 
         // Écouteurs pour les actions des joueurs
         this.actionListeners = [];
@@ -63,6 +93,23 @@ class Game {
         this.deadPlayers = [];
         this.nightVictim = null;
         this.dayVictim = null;
+
+        // Données des rôles (depuis rolesData.js)
+        this.rolesData = {
+            "Voyante": { camp: "Villageois", ordre: 6 },
+            "Loup-Garou": { camp: "Loups-Garous", ordre: 3 },
+            "Sorcière": { camp: "Villageois", ordre: 5 },
+            "Cupidon": { camp: "Villageois", ordre: 1 },
+            "Chasseur": { camp: "Villageois" },
+            "Salvateur": { camp: "Villageois", ordre: 2 },
+            "Joueur de Flûte": { camp: "Neutre", ordre: 7 },
+            "Renard": { camp: "Villageois", ordre: 8 },
+            "Infect Père des Loups": { camp: "Loups-Garous", ordre: 4 },
+            "Ancien": { camp: "Villageois" },
+            "Bouc Émissaire": { camp: "Villageois" },
+            "Villageois": { camp: "Villageois" },
+            "Corbeau": { camp: "Villageois", ordre: 9 }
+        };
     }
 
     // Démarre le jeu
@@ -103,7 +150,7 @@ class Game {
         this.startNightPhase();
     }
 
-    // Démarre la phase de nuit
+    // Démarre la phase de nuit avec ses sous-phases
     startNightPhase() {
         // Annuler le timer précédent si existant
         if (this.phaseTimer) {
@@ -112,34 +159,186 @@ class Game {
 
         // Mise à jour de l'état
         this.currentPhase = 'night';
-        this.phaseTimeLeft = this.nightDuration;
+        this.currentNightOrder = 0;
+        this.nightActionsCompleted.clear();
 
-        // Notification aux clients
+        // Notification générale aux clients
         this.io.to(this.roomCode).emit('phaseChanged', {
             phase: 'night',
-            timeLeft: this.phaseTimeLeft,
             turn: this.currentTurn
         });
 
         // Message système
         this.sendSystemMessage('La nuit tombe sur le village...');
 
-        // Démarrage du timer
+        // Démarrer la première sous-phase de nuit
+        this.startNextNightSubPhase();
+    }
+
+    // Méthode pour démarrer la prochaine sous-phase de nuit
+    startNextNightSubPhase() {
+        // Incrémenter l'ordre pour passer à la prochaine sous-phase
+        this.currentNightOrder++;
+
+        // Chercher les rôles disponibles pour l'ordre actuel
+        const availableRoles = this.findAvailableRolesForCurrentOrder();
+
+        if (availableRoles.length === 0) {
+            // Si aucun rôle disponible pour cet ordre, passer au suivant
+            if (this.currentNightOrder < 10) { // Limite arbitraire pour éviter les boucles infinies
+                this.startNextNightSubPhase();
+            } else {
+                // Fin de la nuit, passer à la phase de jour
+                this.startDayPhase();
+            }
+            return;
+        }
+
+        // Définir la sous-phase actuelle en fonction du rôle
+        const currentRole = availableRoles[0].role;
+        this.currentNightPhase = currentRole.toLowerCase();
+
+        // Définir la durée en fonction du rôle
+        let duration = 30; // Valeur par défaut
+        if (currentRole === 'Cupidon') duration = this.cupidDuration;
+        else if (currentRole === 'Loup-Garou' || currentRole === 'Infect Père des Loups') duration = this.werewolvesDuration;
+        else if (currentRole === 'Voyante') duration = this.seerDuration;
+        else if (currentRole === 'Sorcière') duration = this.witchDuration;
+
+        this.phaseTimeLeft = duration;
+
+        // Notification aux joueurs concernés
+        for (const player of availableRoles) {
+            // Envoyer une notification à chaque joueur du rôle courant
+            this.io.to(this.roomCode).emit('nightActionRequired', {
+                role: currentRole,
+                player: player.pseudo,
+                timeLeft: this.phaseTimeLeft
+            });
+        }
+
+        // Démarrage du timer pour cette sous-phase
         this.phaseTimer = setInterval(() => {
             this.phaseTimeLeft--;
 
-            // Envoyer une mise à jour à chaque seconde
+            // Envoyer une mise à jour du timer aux joueurs concernés
             this.io.to(this.roomCode).emit('timerUpdate', {
                 timeLeft: this.phaseTimeLeft,
-                phase: this.currentPhase
+                phase: this.currentPhase,
+                subPhase: this.currentNightPhase
             });
 
-            // Fin de la phase
+            // Fin de la sous-phase
             if (this.phaseTimeLeft <= 0) {
                 clearInterval(this.phaseTimer);
-                this.startDayPhase();
+
+                // Si aucune action n'a été effectuée pour cette sous-phase, gérer des actions par défaut
+                this.handleDefaultNightActions();
+
+                // Passer à la prochaine sous-phase
+                this.startNextNightSubPhase();
             }
         }, 1000);
+    }
+
+    // Méthode pour trouver les rôles disponibles pour l'ordre actuel
+    findAvailableRolesForCurrentOrder() {
+        if (!this.playerRoles || !this.playerRoles.players) return [];
+
+        // Cas spécial pour Cupidon (ordre 1)
+        if (this.currentNightOrder === 1) {
+            // Si Cupidon a déjà joué ou est absent/mort, retourner liste vide
+            if (this.cupidPlayed) return [];
+
+            const cupidon = this.playerRoles.players.find(p =>
+                p.role === 'Cupidon' && !this.deadPlayers.includes(p.pseudo)
+            );
+
+            if (cupidon) {
+                return [cupidon];
+            }
+            return [];
+        }
+
+        // Pour les autres ordres
+        return this.playerRoles.players.filter(p => {
+            // Trouver l'ordre du rôle
+            const roleOrder = this.getRoleOrder(p.role);
+
+            // Le joueur est vivant et son rôle correspond à l'ordre actuel
+            return roleOrder === this.currentNightOrder && !this.deadPlayers.includes(p.pseudo);
+        });
+    }
+
+    // Méthode pour obtenir l'ordre d'un rôle
+    getRoleOrder(roleName) {
+        return this.rolesData[roleName]?.ordre || 99;
+    }
+
+    // Méthode pour gérer les actions par défaut si un joueur n'a pas agi
+    handleDefaultNightActions() {
+        // Si on est dans la phase de Cupidon et qu'il n'a pas choisi d'amoureux
+        if (this.currentNightPhase === 'cupidon' && !this.nightActionsCompleted.has('cupidon')) {
+            // Ne rien faire, Cupidon a raté son tour
+            this.cupidPlayed = true;
+            this.sendSystemMessage("Cupidon s'est endormi et n'a pas désigné d'amoureux.");
+
+            // Envoi de la mise à jour de phase
+            this.io.to(this.roomCode).emit('timerUpdate', {
+                timeLeft: this.phaseTimeLeft,
+                phase: this.currentPhase,
+                subPhase: this.currentNightPhase
+            });
+        }
+
+        // Actions par défaut pour les autres rôles pourraient être ajoutées ici
+    }
+
+    // Méthode pour traiter l'action de Cupidon
+    processCupidAction(cupid, lovers) {
+        if (this.currentPhase !== 'night' || this.currentNightPhase !== 'cupidon') {
+            return { success: false, message: "Ce n'est pas le moment pour Cupidon d'agir" };
+        }
+
+        // Vérifier que Cupidon n'a pas déjà joué
+        if (this.cupidPlayed) {
+            return { success: false, message: "Cupidon a déjà utilisé son pouvoir" };
+        }
+
+        // Vérifier que les amoureux sont valides (2 joueurs différents et vivants)
+        if (!lovers || lovers.length !== 2 || lovers[0] === lovers[1]) {
+            return { success: false, message: "Sélection d'amoureux invalide" };
+        }
+
+        if (this.deadPlayers.includes(lovers[0]) || this.deadPlayers.includes(lovers[1])) {
+            return { success: false, message: "Un joueur mort ne peut pas être amoureux" };
+        }
+
+        // Enregistrer les amoureux et marquer Cupidon comme ayant joué
+        this.lovers = lovers;
+        this.cupidPlayed = true;
+
+        // Informer les amoureux qu'ils sont en couple
+        this.io.to(this.roomCode).emit('loversAnnounce', {
+            lovers: this.lovers
+        });
+
+        // Informer Cupidon que son action a été effectuée
+        this.io.to(this.roomCode).emit('cupidActionCompleted');
+
+        // Marquer l'action comme effectuée
+        this.nightActionsCompleted.set('cupidon', true);
+
+        // Message pour Cupidon uniquement
+        this.sendPrivateMessage(cupid, `Vous avez lié ${lovers[0]} et ${lovers[1]} par l'amour.`);
+
+        // Si le timer est encore en cours, le terminer et passer à la phase suivante
+        if (this.phaseTimer) {
+            clearInterval(this.phaseTimer);
+            this.startNextNightSubPhase();
+        }
+
+        return { success: true };
     }
 
     // Démarre la phase de jour
@@ -161,8 +360,9 @@ class Game {
             this.sendSystemMessage(`${victim} a été dévoré par les loups-garous cette nuit!`);
             this.sendSystemMessage(`C'était un ${role.role} du camp des ${role.camp}.`);
 
-            // Ajouter à la liste des morts
-            this.deadPlayers.push(victim);
+            // Gérer la mort du joueur (et potentiellement de son amoureux)
+            this.handlePlayerDeath(victim, 'loup-garou');
+
             this.nightVictim = null;
         } else if (this.currentTurn > 1) { // Ne pas afficher ce message au premier tour
             this.sendSystemMessage("Personne n'a été dévoré cette nuit.");
@@ -248,8 +448,8 @@ class Game {
             this.sendSystemMessage(`Le village a décidé d'éliminer ${victim}!`);
             this.sendSystemMessage(`C'était un ${role.role} du camp des ${role.camp}.`);
 
-            // Ajouter à la liste des morts
-            this.deadPlayers.push(victim);
+            // Gérer la mort du joueur (et potentiellement de son amoureux)
+            this.handlePlayerDeath(victim, 'vote');
         } else {
             this.sendSystemMessage("Le village n'a pas réussi à se mettre d'accord. Personne n'est éliminé.");
         }
@@ -353,9 +553,54 @@ class Game {
         return { success: true };
     }
 
+    // Méthode pour gérer la mort d'un joueur et potentiellement de son amoureux
+    handlePlayerDeath(player, cause = 'default') {
+        // Ajouter à la liste des morts s'il n'y est pas déjà
+        if (!this.deadPlayers.includes(player)) {
+            this.deadPlayers.push(player);
+
+            // Vérifier si le joueur était amoureux
+            if (this.lovers && (this.lovers[0] === player || this.lovers[1] === player)) {
+                const otherLover = this.lovers[0] === player ? this.lovers[1] : this.lovers[0];
+                if (!this.deadPlayers.includes(otherLover)) {
+                    // Délai plus long pour laisser le temps à l'annonce principale de se terminer
+                    setTimeout(() => {
+                        const loverRole = this.getPlayerRole(otherLover);
+                        this.deadPlayers.push(otherLover);
+
+                        // Envoyer d'abord l'événement de mort pour la séquence visuelle
+                        this.io.to(this.roomCode).emit('loverDeath', {
+                            victim: player,
+                            lover: otherLover,
+                            loverRole: loverRole,
+                            deadPlayers: this.deadPlayers
+                        });
+
+                        // Puis envoyer les messages système
+                        setTimeout(() => {
+                            this.sendSystemMessage(`${otherLover} meurt de chagrin suite à la perte de son amour!`);
+                            this.sendSystemMessage(`C'était un ${loverRole.role} du camp des ${loverRole.camp}.`);
+                        }, 1500);
+                    }, 5000);
+                }
+            }
+        }
+    }
+
     // Envoie un message système à tous les joueurs
     sendSystemMessage(message) {
         this.io.to(this.roomCode).emit('systemMessage', message);
+    }
+
+    // Envoie un message privé à un joueur spécifique
+    sendPrivateMessage(username, message) {
+        const socketId = this.manager.getPlayerSocketId(username);
+        if (socketId) {
+            this.io.to(socketId).emit('privateMessage', {
+                content: message,
+                sender: 'Système'
+            });
+        }
     }
 
     // Nettoie les ressources du jeu
@@ -378,9 +623,12 @@ class Game {
         return {
             isRunning: this.isRunning,
             currentPhase: this.currentPhase,
+            currentNightPhase: this.currentNightPhase,
             currentTurn: this.currentTurn,
             timeLeft: this.phaseTimeLeft,
-            playerRoles: this.playerRoles
+            playerRoles: this.playerRoles,
+            deadPlayers: this.deadPlayers,
+            lovers: this.lovers
         };
     }
 }

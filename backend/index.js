@@ -224,6 +224,13 @@ function assignRolesAlgorithm(players) {
 io.on('connection', (socket) => {
     console.log('Un utilisateur s\'est connecté');
 
+    socket.on('connection', () => {
+        // Stocker le socketId pour ce joueur si connecté
+        if (socket.handshake.auth?.username) {
+            gameManager.addPlayerSocket(socket.handshake.auth.username, socket.id);
+        }
+    });
+
     socket.on('checkRoom', (roomCode) => {
         const roomExists = rooms.has(roomCode);
         const currentPlayers = roomExists ? rooms.get(roomCode).size : 0;
@@ -482,8 +489,53 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('cupidAction', ({ room, lovers }) => {
+        const username = socket.handshake.auth?.username;
+
+        if (!username) {
+            socket.emit('actionError', { message: "Vous n'êtes pas authentifié" });
+            return;
+        }
+
+        if (!rooms.has(room)) {
+            socket.emit('actionError', { message: "Cette room n'existe pas" });
+            return;
+        }
+
+        const game = gameManager.getGame(room);
+
+        if (!game) {
+            socket.emit('actionError', { message: "Aucun jeu en cours dans cette room" });
+            return;
+        }
+
+        if (game.currentPhase !== 'night' || game.currentNightPhase !== 'cupidon') {
+            socket.emit('actionError', { message: "Ce n'est pas le moment pour Cupidon d'agir" });
+            return;
+        }
+
+        // Vérifier que le joueur est bien Cupidon
+        const playerRole = game.getPlayerRole(username);
+        if (!playerRole || playerRole.role !== 'Cupidon') {
+            socket.emit('actionError', { message: "Vous n'êtes pas Cupidon" });
+            return;
+        }
+
+        // Traiter l'action de Cupidon
+        const result = game.processCupidAction(username, lovers);
+
+        if (!result.success) {
+            socket.emit('actionError', { message: result.message });
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Un utilisateur s\'est déconnecté');
+
+        // Supprimer le socketId pour ce joueur
+        if (socket.handshake.auth?.username) {
+            gameManager.removePlayerSocket(socket.handshake.auth.username);
+        }
     });
 });
 

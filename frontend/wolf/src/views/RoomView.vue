@@ -221,8 +221,8 @@
 
           <div class="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl">
             <img :src="gamePhase !== 'night'
-              ? '/src/assets/images/roles/Village_Jour.jpeg'
-              : '/src/assets/images/roles/Village_Nuit.jpeg'"
+              ? '/assets/Village_Jour.jpeg'
+              : '/assets/Village_Nuit.jpeg'"
               class="min-w-full min-h-full object-cover transform -translate-y-12 rounded-xl"
               alt="Village background" />
           </div>
@@ -257,6 +257,10 @@
                     clip-rule="evenodd"></path>
                 </svg>
                 <span class="text-purple-400 text-lg font-semibold ml-1">Vote</span>
+              </div>
+              <div v-if="gamePhase === 'night' && nightPhaseDescription"
+                class="absolute top-20 left-0 right-0 mx-auto text-center bg-blue-900/50 backdrop-blur-sm border border-blue-500/40 py-3 px-6 rounded-lg max-w-lg shadow-lg">
+                <p class="text-blue-200 font-semibold">{{ nightPhaseDescription }}</p>
               </div>
             </div>
 
@@ -304,16 +308,18 @@
                   <div class="flex flex-col items-center justify-center">
                     <!-- Avatar avec indication de rôle et possibilité de vote -->
                     <div class="relative">
-                      <img src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
+                      <img src="/assets/avatar_default2.png" alt="Avatar"
                         class="w-20 h-20 rounded-full border-2 transition-transform duration-300" :class="{
                           'border-red-400': isWerewolf(user) && (user === socketStore.username || isWerewolf(socketStore.username)),
                           'border-gray-500': !isWerewolf(user) || (isWerewolf(user) && user !== socketStore.username && !isWerewolf(socketStore.username)),
                           'border-purple-400': user === socketStore.username,
                           'opacity-50 grayscale cursor-not-allowed': deadPlayers.includes(user) || deadPlayers.includes(socketStore.username),
                           'cursor-pointer hover:scale-110 hover:border-white hover:border-opacity-70': gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username && !deadPlayers.includes(socketStore.username),
-                          'hover:scale-105': gamePhase !== 'vote' && !deadPlayers.includes(user)
+                          'hover:scale-105': gamePhase !== 'vote' && !deadPlayers.includes(user),
+                          'border-pink-400 shadow-lg shadow-pink-500/50': cupidSelectionActive && selectedLovers.includes(user),
+                          'cursor-pointer hover:scale-110 hover:border-pink-400 hover:border-opacity-70': cupidSelectionActive && !deadPlayers.includes(user)
                         }"
-                        @click="gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username && !deadPlayers.includes(socketStore.username) ? voteForPlayer(user) : null">
+                        @click="gamePhase === 'vote' && !deadPlayers.includes(user) && user !== socketStore.username && !deadPlayers.includes(socketStore.username) ? voteForPlayer(user) : (cupidSelectionActive ? handleCupidSelection(user) : null)">
 
                       <!-- Indicateur de vote -->
                       <div v-if="gamePhase === 'vote' && getVotesForPlayer(user) > 0"
@@ -327,17 +333,31 @@
                         Votre vote
                       </div>
 
-                      <!-- Indicateur de rôle (visible uniquement pour son propre rôle ou entre loups) -->
-                      <div
-                        v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username)) || deadPlayers.includes(user)"
+                      <!-- Indicateur de rôle (visible uniquement pour son propre rôle, entre loups ou le couple ) -->
+                      <div v-if="user === socketStore.username || (isWerewolf(user) && isWerewolf(socketStore.username)) ||
+                        deadPlayers.includes(user) || (isInLove(socketStore.username) && isInLove(user))"
                         class="absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-2" :class="{
                           'border-red-400 bg-red-900/50': isWerewolf(user),
                           'border-blue-400 bg-blue-900/50': getPlayerRole(user)?.camp === 'Villageois',
                           'border-yellow-400 bg-yellow-900/50': getPlayerRole(user)?.camp === 'Neutre',
-                          'opacity-75': deadPlayers.includes(user)
+                          'opacity-95': deadPlayers.includes(user)
                         }">
                         <img v-if="getPlayerRoleDetails(user)" :src="getPlayerRoleDetails(user)?.icon"
                           :alt="getPlayerRole(user)?.role" class="w-full h-full rounded-full">
+                      </div>
+
+                      <!-- Indicateur du couple (visible uniquement pour le couple et cupidon qui voit son couple )-->
+                      <div
+                        v-if="isInLove(user) && (isInLove(socketStore.username) || user === socketStore.username || isCupidon())"
+                        class="absolute -bottom-2 -left-2 w-8 h-8 rounded-full border-2 border-pink-400 bg-pink-900/50 z-10">
+                        <img src="/assets/coeur_rose.png" alt="Amoureux"
+                          class="w-full h-full rounded-full animate-pulse">
+                      </div>
+
+                      <!-- Badge de séléction des amoureux -->
+                      <div v-if="cupidSelectionActive && selectedLovers.includes(user)"
+                        class="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-pink-500 flex items-center justify-center text-white font-bold text-sm border-2 border-white">
+                        {{ selectedLovers.indexOf(user) + 1 }}
                       </div>
 
                       <!-- Indicateur de mort -->
@@ -373,13 +393,48 @@
                     <!-- Nom du joueur -->
                     <span class="mt-2 text-base font-medium drop-shadow-md" :class="{
                       'text-purple-200': user !== socketStore.username,
-                      'text-purple-600': user === socketStore.username && gamePhase !== 'night',
-                      'text-purple-400': user === socketStore.username,
+                      'text-purple-300': user === socketStore.username && gamePhase !== 'night',
+                      'text-purple-400': user === socketStore.username && gamePhase === 'night',
                       'line-through text-gray-500': deadPlayers.includes(user)
                     }">{{ user }}</span>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div v-if="cupidSelectionActive"
+            class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-purple-900/70 backdrop-blur-sm border border-pink-500/40 rounded-xl p-4 z-40 w-full max-w-md shadow-xl">
+            <div class="text-center mb-4">
+              <img src="/assets/cupidon.png" alt="Cupidon"
+                class="w-16 h-16 mx-auto mb-2 border-4 border-pink-400 rounded-full animate-pulse">
+              <h3 class="text-xl font-bold text-pink-400">Cupidon</h3>
+              <p class="text-gray-300 text-sm">Choisissez deux joueurs pour les lier par l'amour.</p>
+              <div class="mt-2 text-pink-300">
+                <span>Temps restant: {{ clientTimer }}s</span>
+              </div>
+            </div>
+
+            <!-- Notification -->
+            <div v-if="cupidNotification" class="text-center mb-4">
+              <div class="px-3 py-2 rounded-lg inline-block"
+                :class="selectedLovers.length === 2 ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'">
+                {{ cupidNotification }}
+              </div>
+            </div>
+
+            <div class="flex justify-center gap-4">
+              <button @click="confirmCupidSelection"
+                class="px-5 py-2 rounded-full font-semibold transition-all hover:scale-105" :class="{
+                  'bg-pink-500/30 text-pink-200 cursor-not-allowed': selectedLovers.length !== 2,
+                  'bg-pink-500/70 text-pink-100 hover:bg-pink-500/90': selectedLovers.length === 2
+                }" :disabled="selectedLovers.length !== 2">
+                Confirmer
+              </button>
+              <button @click="cancelCupidSelection"
+                class="px-5 py-2 bg-gray-700/50 text-gray-300 rounded-full transition-all hover:bg-gray-700/70 hover:scale-105">
+                Annuler
+              </button>
             </div>
           </div>
 
@@ -613,7 +668,7 @@
 
             <!-- Avatar du mort avec marques de griffures sanglantes -->
             <div class="relative mx-auto w-40 h-40 mb-4">
-              <img src="/src/assets/images/roles/avatar_default2.png" alt="Avatar"
+              <img src="/assets/avatar_default2.png" alt="Avatar"
                 class="w-40 h-40 rounded-full border-4 border-red-600 grayscale opacity-80">
 
               <!-- Griffures sanglantes -->
@@ -714,6 +769,13 @@
     <RoleSelectionModal v-if="showRoleSelectionModal" :show="showRoleSelectionModal"
       :player-count="connectedUsers.length" @close="showRoleSelectionModal = false"
       @start-game-auto="startGameWithAutoBalance" @start-game-manual="startGameWithManualRoles" />
+
+    <CupidActionModal :show="false" :players="connectedUsers" :deadPlayers="deadPlayers"
+      :currentUsername="socketStore.username" :timeLeft="clientTimer" @submit="submitCupidAction"
+      @close="showCupidModal = false" />
+
+    <LoverDeathModal :show="showLoverDeathModal" :victim="loverVictim" :role="loverVictimRole"
+      :roleDetails="loverRoleDetails" @close="showLoverDeathModal = false" />
   </div>
 </template>
 
@@ -725,11 +787,15 @@ import { useSocketStore } from "../stores/socket";
 import { rolesDataJSON } from '@/data/rolesData';
 import RoleDetailModal from '@/components/RoleDetailModal.vue';
 import RoleSelectionModal from '@/components/RoleSelectionModal.vue';
+import CupidActionModal from '@/components/CupidActionModal.vue';
+import LoverDeathModal from '@/components/LoverDeathModal.vue';
 
 export default {
   components: {
     RoleDetailModal,
-    RoleSelectionModal
+    RoleSelectionModal,
+    CupidActionModal,
+    LoverDeathModal,
   },
   props: {
     roomCode: {
@@ -776,6 +842,17 @@ export default {
     const showAnnounceScreen = ref(false);
     const targetPhase = ref('waiting');
     const showRoleSelectionModal = ref(false);
+    const showCupidModal = ref(false);
+    const lovers = ref(null);
+    const myLover = ref(null);
+    const showLoverDeathModal = ref(false);
+    const loverVictim = ref(null);
+    const loverVictimRole = ref(null);
+    const currentNightSubPhase = ref('');
+    const cupidSelectionActive = ref(false);
+    const selectedLovers = ref([]);
+    const cupidNotification = ref('');
+
 
     const hasUsername = computed(() => !!socketStore.username);
 
@@ -928,6 +1005,124 @@ export default {
     const getVictimRoleDetails = () => {
       if (!dayVictimRole.value?.role) return null;
       return rolesDataJSON[dayVictimRole.value.role];
+    };
+
+    const loverRoleDetails = computed(() => {
+      if (loverVictimRole.value?.role) {
+        return rolesDataJSON[loverVictimRole.value.role];
+      }
+      return null;
+    });
+
+    // Vérifier si un joueur est amoureux
+    const isInLove = (username) => {
+      return lovers.value && (lovers.value[0] === username || lovers.value[1] === username);
+    };
+
+    const submitCupidAction = (selectedLovers) => {
+      socketStore.socket.emit('cupidAction', {
+        room: props.roomCode,
+        lovers: selectedLovers
+      });
+
+      showCupidModal.value = false;
+    };
+
+    const areLovers = (player1, player2) => {
+      return lovers.value &&
+        ((lovers.value[0] === player1 && lovers.value[1] === player2) ||
+          (lovers.value[0] === player2 && lovers.value[1] === player1));
+    };
+
+    const nightPhaseDescription = computed(() => {
+      if (gamePhase.value !== 'night') return '';
+
+      switch (currentNightSubPhase.value) {
+        case 'cupidon':
+          return "Cupidon se réveille et désigne les deux amoureux...";
+        case 'loup-garou':
+          return "Les loups-garous se réveillent et choisissent leur victime...";
+        case 'voyante':
+          return "La voyante se réveille et consulte les astres...";
+        case 'sorcière':
+          return "La sorcière se réveille et prépare ses potions...";
+        case 'salvateur':
+          return "Le salvateur se réveille et protège un villageois...";
+        case 'renard':
+          return "Le renard se réveille et flaire les traces des loups...";
+        case 'corbeau':
+          return "Le corbeau se réveille et désigne sa cible...";
+        case 'infect père des loups':
+          return "L'infect père des loups se réveille et rôde dans le village...";
+        case 'joueur de flûte':
+          return "Le joueur de flûte se réveille et enchante les habitants...";
+        default:
+          return "Les créatures de la nuit sont à l'œuvre...";
+      }
+    });
+
+    const isCupidon = () => {
+      if (!currentPlayerRole.value) return false;
+      return currentPlayerRole.value.role === 'Cupidon';
+    };
+
+    const startCupidSelection = () => {
+      // Réinitialiser la sélection
+      selectedLovers.value = [];
+      cupidNotification.value = '';
+      cupidSelectionActive.value = true;
+    };
+
+    const handleCupidSelection = (player) => {
+      // Ne rien faire si ce n'est pas le mode sélection de Cupidon
+      if (!cupidSelectionActive.value) return;
+
+      // Ne pas permettre de sélectionner un joueur mort
+      if (deadPlayers.value.includes(player)) return;
+
+      // Vérifier si le joueur est déjà sélectionné
+      if (selectedLovers.value.includes(player)) {
+        // Le retirer de la sélection
+        selectedLovers.value = selectedLovers.value.filter(selected => selected !== player);
+        cupidNotification.value = '';
+      } else {
+        // Vérifier si on a déjà sélectionné 2 joueurs
+        if (selectedLovers.value.length >= 2) {
+          cupidNotification.value = 'Vous ne pouvez sélectionner que 2 joueurs';
+          return;
+        }
+
+        // Ajouter le joueur à la sélection
+        selectedLovers.value.push(player);
+
+        // Afficher un message si 2 joueurs sont sélectionnés
+        if (selectedLovers.value.length === 2) {
+          cupidNotification.value = 'Amoureux sélectionnés ! Confirmez votre choix';
+        }
+      }
+    };
+
+    // Fonction pour confirmer la sélection des amoureux
+    const confirmCupidSelection = () => {
+      if (selectedLovers.value.length !== 2) {
+        cupidNotification.value = 'Vous devez sélectionner exactement 2 joueurs';
+        return;
+      }
+
+      // Envoyer au serveur
+      socketStore.socket.emit('cupidAction', {
+        room: props.roomCode,
+        lovers: selectedLovers.value
+      });
+
+      // Désactiver le mode sélection
+      cupidSelectionActive.value = false;
+    };
+
+    // Fonction pour annuler la sélection
+    const cancelCupidSelection = () => {
+      selectedLovers.value = [];
+      cupidSelectionActive.value = false;
     };
 
     onMounted(() => {
@@ -1130,10 +1325,15 @@ export default {
         }, 3000);
       });
 
-      socketStore.socket.on('timerUpdate', ({ timeLeft, phase }) => {
+      socketStore.socket.on('timerUpdate', ({ timeLeft, phase, subPhase }) => {
         // Met à jour le timer serveur
         phaseTimer.value = timeLeft;
         gamePhase.value = phase;
+
+        // Mettre à jour la sous-phase de nuit si présente
+        if (subPhase) {
+          currentNightSubPhase.value = subPhase;
+        }
 
         // Réinitialise le timer client
         clientTimer.value = timeLeft;
@@ -1158,6 +1358,61 @@ export default {
         }
       });
 
+      socketStore.socket.on('loversAnnounce', ({ lovers: coupleLovers }) => {
+        lovers.value = coupleLovers;
+
+        // Si le joueur actuel est un des amoureux, stocker qui est son amoureux
+        if (socketStore.username === coupleLovers[0]) {
+          myLover.value = coupleLovers[1];
+        } else if (socketStore.username === coupleLovers[1]) {
+          myLover.value = coupleLovers[0];
+        }
+      });
+
+      socketStore.socket.on('loverDeath', ({ victim, lover, loverRole, deadPlayers: updatedDeadPlayers }) => {
+        // Mettre à jour la liste des morts
+        deadPlayers.value = updatedDeadPlayers;
+
+        // Afficher l'animation de mort par chagrin
+        loverVictim.value = lover;
+        loverVictimRole.value = loverRole;
+        showLoverDeathModal.value = true;
+      });
+
+      socketStore.socket.on('cupidActionCompleted', () => {
+        // Notifier que l'action de Cupidon a été complétée
+        showCupidModal.value = false;
+      });
+
+      socketStore.socket.on('actionError', ({ message }) => {
+        error.value = message;
+        setTimeout(() => {
+          error.value = '';
+        }, 3000);
+      });
+
+      socketStore.socket.on('nightActionRequired', ({ role, player, timeLeft }) => {
+        // Si c'est l'action de Cupidon et que le joueur est le joueur actuel
+        if (role === 'Cupidon' && player === socketStore.username) {
+          clientTimer.value = timeLeft;
+          // Utiliser uniquement l'interface intégrée, pas le modal
+          startCupidSelection();
+
+          // Timer pour fermer automatiquement après le temps imparti
+          setTimeout(() => {
+            if (cupidSelectionActive.value) {
+              // Si le joueur n'a pas confirmé, on annule
+              cancelCupidSelection();
+            }
+          }, timeLeft * 1000);
+        }
+        // ... gérer les autres rôles si nécessaire
+      });
+
+      socketStore.socket.on('cupidActionCompleted', () => {
+        cupidSelectionActive.value = false;
+      });
+
     });
 
     onUnmounted(() => {
@@ -1171,6 +1426,11 @@ export default {
       socketStore.socket.off("systemMessage");
       socketStore.socket.off("gameStatus");
       socketStore.socket.off("playerKicked");
+      socketStore.socket.off('nightActionRequired');
+      socketStore.socket.off('loversAnnounce');
+      socketStore.socket.off('loverDeath');
+      socketStore.socket.off('cupidActionCompleted');
+      socketStore.socket.off('actionError');
 
       if (clientTimerInterval.value) {
         clearInterval(clientTimerInterval.value);
@@ -1295,6 +1555,24 @@ export default {
       showRoleSelectionModal,
       startGameWithAutoBalance,
       startGameWithManualRoles,
+      showCupidModal,
+      lovers,
+      myLover,
+      showLoverDeathModal,
+      loverVictim,
+      loverVictimRole,
+      loverRoleDetails,
+      isInLove,
+      submitCupidAction,
+      currentNightSubPhase,
+      nightPhaseDescription,
+      isCupidon,
+      cupidSelectionActive,
+      selectedLovers,
+      cupidNotification,
+      handleCupidSelection,
+      confirmCupidSelection,
+      cancelCupidSelection,
     };
   },
 };
@@ -1317,5 +1595,21 @@ export default {
 
 .animate-twinkle {
   animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style>

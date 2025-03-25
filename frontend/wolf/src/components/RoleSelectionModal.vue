@@ -59,7 +59,7 @@
                     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="bg-gray-800/30 border border-gray-700/30 rounded-lg p-3">
                             <div class="flex items-center">
-                                <img src="/src/assets/images/roles/loup-garou.png" alt="Loups-Garous"
+                                <img src="/assets/loup-garou.png" alt="Loups-Garous"
                                     class="w-10 h-10 rounded-full border border-red-500 mr-3">
                                 <div>
                                     <p class="text-red-400 font-semibold">Camp des Loups-Garous</p>
@@ -70,7 +70,7 @@
 
                         <div class="bg-gray-800/30 border border-gray-700/30 rounded-lg p-3">
                             <div class="flex items-center">
-                                <img src="/src/assets/images/roles/voyante.png" alt="Voyante"
+                                <img src="/assets/voyante.png" alt="Voyante"
                                     class="w-10 h-10 rounded-full border border-blue-500 mr-3">
                                 <div>
                                     <p class="text-blue-400 font-semibold">Voyante</p>
@@ -81,7 +81,7 @@
 
                         <div class="bg-gray-800/30 border border-gray-700/30 rounded-lg p-3">
                             <div class="flex items-center">
-                                <img src="/src/assets/images/roles/sorciere.png" alt="Sorcière"
+                                <img src="/assets/sorciere.png" alt="Sorcière"
                                     class="w-10 h-10 rounded-full border border-blue-500 mr-3">
                                 <div>
                                     <p class="text-blue-400 font-semibold">Sorcière</p>
@@ -92,7 +92,7 @@
 
                         <div class="bg-gray-800/30 border border-gray-700/30 rounded-lg p-3">
                             <div class="flex items-center">
-                                <img src="/src/assets/images/roles/villageois.png" alt="Villageois"
+                                <img src="/assets/villageois.png" alt="Villageois"
                                     class="w-10 h-10 rounded-full border border-blue-500 mr-3">
                                 <div>
                                     <p class="text-blue-400 font-semibold">Autres rôles</p>
