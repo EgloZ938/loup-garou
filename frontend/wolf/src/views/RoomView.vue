@@ -659,96 +659,225 @@
 
 
       <!-- Annonce du résultat du vote -->
-      <div v-if="gamePhase === 'announce' && showAnnounceScreen"
-        class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-40">
-        <div class="text-center max-w-xl">
-          <div v-if="dayVictim" class="space-y-8">
-            <!-- Annonce de la personne éliminée avec son avatar -->
-            <h2 class="text-5xl font-bold text-red-400 mb-6">Élimination</h2>
+      <div v-if="gamePhase === 'announce' && showAnnounceScreen && dayVictim"
+        class="fixed inset-0 overflow-hidden flex items-center justify-center p-4 z-40 transition-opacity duration-300"
+        :class="[
+          { 'opacity-100': showAnnounceScreen, 'opacity-0 pointer-events-none': !showAnnounceScreen },
+          {
+            'bg-black/95': animationStage < 7,
+            'bg-red-950/95': animationStage >= 7 && dayVictimRole?.camp === 'Loups-Garous',
+            'bg-blue-950/95': animationStage >= 7 && dayVictimRole?.camp === 'Villageois',
+            'bg-yellow-950/95': animationStage >= 7 && dayVictimRole?.camp === 'Neutre'
+          }
+        ]">
 
-            <!-- Avatar du mort avec marques de griffures sanglantes -->
-            <div class="relative mx-auto w-40 h-40 mb-4">
-              <img src="/assets/avatar_default2.png" alt="Avatar"
-                class="w-40 h-40 rounded-full border-4 border-red-600 grayscale opacity-80">
+        <!-- Brume/brouillard qui se répand -->
+        <div class="fixed inset-0 pointer-events-none">
+          <div v-for="i in 10" :key="`fog-${i}`" class="absolute opacity-0 fog-particle"
+            :class="{ 'animate-fog': animationStage >= 2 }" :style="{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              width: `${Math.random() * 300 + 100}px`,
+              height: `${Math.random() * 300 + 100}px`,
+              animationDelay: `${Math.random() * 1}s`,
+              transform: `rotate(${Math.random() * 360}deg)`,
+              filter: `blur(${Math.random() * 10 + 5}px)`
+            }">
+          </div>
+        </div>
 
-              <!-- Griffures sanglantes -->
-              <div class="absolute inset-0 flex items-center justify-center">
-                <!-- Première série de griffures (3 traits) -->
-                <div
-                  class="absolute h-0.5 w-36 bg-red-600 transform rotate-45 translate-y-4 shadow-lg shadow-red-900/50">
-                </div>
-                <div class="absolute h-0.5 w-36 bg-red-600 transform rotate-45 shadow-lg shadow-red-900/50"></div>
-                <div
-                  class="absolute h-0.5 w-36 bg-red-600 transform rotate-45 -translate-y-4 shadow-lg shadow-red-900/50">
-                </div>
+        <!-- Gouttes de sang qui tombent -->
+        <div v-if="animationStage >= 3" class="fixed inset-0 pointer-events-none overflow-hidden">
+          <div v-for="i in 20" :key="`blood-${i}`"
+            class="absolute w-1 h-6 bg-red-600 rounded-full animate-blood-drip opacity-0" :style="{
+              left: `${Math.random() * 100}%`,
+              top: `-20px`,
+              width: `${Math.random() * 3 + 1}px`,
+              height: `${Math.random() * 15 + 5}px`,
+              animationDelay: `${Math.random() * 3}s`
+            }">
+          </div>
+        </div>
 
-                <!-- Deuxième série de griffures (croisant les premières) -->
-                <div
-                  class="absolute h-0.5 w-36 bg-red-600 transform -rotate-45 translate-y-4 shadow-lg shadow-red-900/50">
-                </div>
-                <div class="absolute h-0.5 w-36 bg-red-600 transform -rotate-45 shadow-lg shadow-red-900/50"></div>
-                <div
-                  class="absolute h-0.5 w-36 bg-red-600 transform -rotate-45 -translate-y-4 shadow-lg shadow-red-900/50">
-                </div>
+        <!-- Éclairs rouges simulant des battements de cœur -->
+        <div v-if="animationStage >= 1" class="fixed inset-0 pointer-events-none bg-red-900/0 heartbeat-flash"></div>
 
-                <!-- Gouttes de sang aux extrémités -->
-                <div class="absolute top-6 left-6 w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-                <div class="absolute top-6 right-6 w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-                <div class="absolute bottom-6 left-6 w-2 h-2 rounded-full bg-red-600 animate-pulse"></div>
-                <div class="absolute bottom-6 right-6 w-3 h-3 rounded-full bg-red-700 animate-pulse"></div>
-              </div>
+        <!-- Conteneur central pour l'animation -->
+        <div class="relative z-10 transform max-w-xl w-full" :class="[
+          { 'scale-100': animationStage >= 1, 'scale-0': animationStage < 1 },
+          { 'animate-screen-shake': animationStage >= 4 }
+        ]">
+
+          <!-- Titre qui apparaît par le haut -->
+          <h2 class="text-5xl font-bold mb-10 text-center title-slide-in" :class="[
+            { 'opacity-0': animationStage < 1, 'opacity-100': animationStage >= 1 },
+            {
+              'text-red-400': dayVictimRole?.camp === 'Loups-Garous',
+              'text-blue-400': dayVictimRole?.camp === 'Villageois',
+              'text-yellow-400': dayVictimRole?.camp === 'Neutre',
+              'text-red-400': !dayVictimRole
+            }
+          ]">Élimination</h2>
+
+          <!-- Citation thématique -->
+          <div v-if="animationStage >= 2"
+            class="text-center mb-8 opacity-0 animate-fade-in italic text-gray-400 quote-text">
+            "{{ getThematicQuote(dayVictimRole?.role) }}"
+          </div>
+
+          <!-- Narratif dramatique -->
+          <div v-if="animationStage >= 3"
+            class="text-center mb-6 text-xl text-gray-300 narrative-text opacity-0 animate-fade-in">
+            Le village découvre avec horreur que...
+          </div>
+
+          <!-- Avatar container avec fissures -->
+          <div class="relative mx-auto mb-4" :class="{
+            'w-40 h-40': animationStage < 5,
+            'w-40 h-40 transition-all duration-1000': animationStage >= 5,
+            'avatar-pulse': animationStage >= 1
+          }">
+
+            <!-- Avatar qui se transforme -->
+            <div class="relative w-full h-full">
+              <!-- Avatar original -->
+              <img src="/assets/avatar_default2.png" :alt="dayVictim"
+                class="w-full h-full object-cover rounded-full transition-all duration-500" :class="{
+                  'grayscale': animationStage >= 2,
+                  'blur-sm': animationStage === 6,
+                  'opacity-0': animationStage >= 7,
+                  'border-4 border-red-600': animationStage >= 2,
+                  'transform scale-110': animationStage === 1
+                }">
+
+              <!-- Morphing vers l'icône du rôle -->
+              <img v-if="getVictimRoleDetails() && animationStage >= 6" :src="getVictimRoleDetails()?.icon"
+                :alt="dayVictimRole?.role"
+                class="absolute inset-0 w-full h-full object-cover rounded-full transition-all duration-1000" :class="{
+                  'opacity-0 transform scale-50': animationStage === 6,
+                  'opacity-100 transform scale-100': animationStage >= 7,
+                }">
             </div>
 
-            <!-- Nom du mort -->
-            <div class="text-4xl font-bold text-gray-300">
+            <!-- Fissures qui se propagent depuis l'avatar -->
+            <template v-if="animationStage >= 4">
+              <div v-for="i in 8" :key="`crack-${i}`" class="absolute bg-red-600 opacity-0 crack-line" :style="{
+                width: '3px',
+                height: `${Math.random() * 150 + 50}px`,
+                left: '50%',
+                top: '50%',
+                transform: `rotate(${i * 45}deg) translateY(-50%)`,
+                transformOrigin: 'top',
+                animationDelay: `${i * 0.1}s`
+              }">
+              </div>
+            </template>
+          </div>
+
+          <!-- Nom de la victime et annonce -->
+          <div class="text-center text-fade-in"
+            :class="{ 'opacity-0': animationStage < 3, 'opacity-100': animationStage >= 3 }">
+            <div class="text-4xl font-bold text-gray-300 mb-6">
               {{ dayVictim }} a été éliminé par le village!
             </div>
+          </div>
 
-            <!-- Révélation du rôle (avec animation) -->
-            <transition enter-active-class="transition duration-1000 transform" enter-from-class="opacity-0 scale-75"
-              enter-to-class="opacity-100 scale-100" appear>
-              <div v-if="showVictimRole && dayVictimRole" class="mt-10 space-y-4">
-                <!-- Titre de la révélation -->
-                <h3 class="text-2xl text-gray-400 mb-2">Révélation du rôle</h3>
-
-                <!-- Icône du rôle -->
-                <div class="relative inline-block mb-2" v-if="getVictimRoleDetails()">
-                  <div class="absolute -inset-2 rounded-full opacity-50" :class="{
-                    'bg-red-500/20 animate-pulse': dayVictimRole?.camp === 'Loups-Garous',
-                    'bg-blue-500/20 animate-pulse': dayVictimRole?.camp === 'Villageois',
-                    'bg-yellow-500/20 animate-pulse': dayVictimRole?.camp === 'Neutre'
-                  }"></div>
-                  <img :src="getVictimRoleDetails()?.icon" :alt="dayVictimRole?.role"
-                    class="w-24 h-24 mx-auto rounded-full border-4 relative" :class="{
-                      'border-red-400': dayVictimRole?.camp === 'Loups-Garous',
-                      'border-blue-400': dayVictimRole?.camp === 'Villageois',
-                      'border-yellow-400': dayVictimRole?.camp === 'Neutre'
-                    }">
-                </div>
-
-                <!-- Nom du rôle avec animation de texte -->
-                <div class="text-3xl font-bold animate-pulse" :class="{
-                  'text-red-400': dayVictimRole?.camp === 'Loups-Garous',
-                  'text-blue-400': dayVictimRole?.camp === 'Villageois',
-                  'text-yellow-400': dayVictimRole?.camp === 'Neutre'
-                }">
-                  {{ dayVictimRole?.role }}
-                </div>
-
-                <!-- Camp du joueur -->
-                <div class="mt-2 px-6 py-2 rounded-full inline-block" :class="{
-                  'bg-red-500/10 text-red-400': dayVictimRole?.camp === 'Loups-Garous',
-                  'bg-blue-500/10 text-blue-400': dayVictimRole?.camp === 'Villageois',
-                  'bg-yellow-500/10 text-yellow-400': dayVictimRole?.camp === 'Neutre'
-                }">
-                  {{ dayVictimRole?.camp }}
+          <!-- Carte de Tarot qui se retourne -->
+          <div v-if="animationStage >= 5" class="relative mx-auto mt-10 perspective-container">
+            <div class="tarot-card" :class="{ 'card-flip': animationStage >= 6 }">
+              <!-- Face avant (dos de la carte) -->
+              <div class="tarot-card-front">
+                <div
+                  class="w-64 h-96 rounded-lg bg-gradient-to-br from-indigo-900 to-purple-900 border-2 border-gray-300/30 flex items-center justify-center">
+                  <div class="text-center p-4">
+                    <div
+                      class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800/80 border border-gray-300/30 flex items-center justify-center">
+                      <div class="text-purple-300 text-5xl">?</div>
+                    </div>
+                    <div class="text-gray-300 text-xl">Révélation</div>
+                    <div class="text-gray-400 text-sm mt-2">Le destin se dévoile...</div>
+                  </div>
                 </div>
               </div>
-            </transition>
 
+              <!-- Face arrière (rôle révélé) -->
+              <div class="tarot-card-back">
+                <div class="w-64 h-96 rounded-lg flex flex-col items-center justify-center p-4" :class="{
+                  'bg-gradient-to-br from-red-950 to-red-800 border-2 border-red-500/30': dayVictimRole?.camp === 'Loups-Garous',
+                  'bg-gradient-to-br from-blue-950 to-blue-800 border-2 border-blue-500/30': dayVictimRole?.camp === 'Villageois',
+                  'bg-gradient-to-br from-yellow-950 to-yellow-900 border-2 border-yellow-500/30': dayVictimRole?.camp === 'Neutre'
+                }">
+
+                  <!-- Contenu de la carte retournée -->
+                  <div v-if="getVictimRoleDetails()" class="text-center">
+                    <!-- Icône du rôle -->
+                    <div class="relative inline-block mb-4 w-20 h-20">
+                      <div class="absolute -inset-1 rounded-full opacity-50" :class="{
+                        'bg-red-500/20 animate-pulse': dayVictimRole?.camp === 'Loups-Garous',
+                        'bg-blue-500/20 animate-pulse': dayVictimRole?.camp === 'Villageois',
+                        'bg-yellow-500/20 animate-pulse': dayVictimRole?.camp === 'Neutre'
+                      }">
+                      </div>
+                      <img :src="getVictimRoleDetails()?.icon" :alt="dayVictimRole?.role"
+                        class="w-full h-full rounded-full border-2 relative object-cover" :class="{
+                          'border-red-400': dayVictimRole?.camp === 'Loups-Garous',
+                          'border-blue-400': dayVictimRole?.camp === 'Villageois',
+                          'border-yellow-400': dayVictimRole?.camp === 'Neutre'
+                        }">
+                    </div>
+
+                    <!-- Titre du rôle -->
+                    <div class="text-2xl font-bold mb-2" :class="{
+                      'text-red-300': dayVictimRole?.camp === 'Loups-Garous',
+                      'text-blue-300': dayVictimRole?.camp === 'Villageois',
+                      'text-yellow-300': dayVictimRole?.camp === 'Neutre'
+                    }">
+                      {{ dayVictimRole?.role }}
+                    </div>
+
+                    <!-- Camp -->
+                    <div class="mt-2 px-4 py-1 rounded-full inline-block text-sm" :class="{
+                      'bg-red-500/10 text-red-300': dayVictimRole?.camp === 'Loups-Garous',
+                      'bg-blue-500/10 text-blue-300': dayVictimRole?.camp === 'Villageois',
+                      'bg-yellow-500/10 text-yellow-300': dayVictimRole?.camp === 'Neutre'
+                    }">
+                      {{ dayVictimRole?.camp }}
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mt-4 text-sm text-gray-300">
+                      {{ getVictimRoleDetails()?.description_courte }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div v-else class="text-5xl font-bold text-gray-300 mb-6">
-            Personne n'a été éliminé.
+
+          <!-- Timer -->
+          <div v-if="animationStage >= 7" class="mt-10 text-center text-fade-in opacity-0 animate-fade-in">
+            <div class="text-xl text-gray-400">
+              La nuit va bientôt tomber...
+            </div>
+            <div class="mt-2 text-lg text-gray-500">
+              {{ clientTimer }}s
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="gamePhase === 'announce' && showAnnounceScreen && !dayVictim"
+        class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-40 transition-opacity duration-300"
+        :class="{ 'opacity-100': showAnnounceScreen, 'opacity-0 pointer-events-none': !showAnnounceScreen }">
+        <div class="text-center max-w-xl">
+          <div class="text-5xl font-bold text-blue-400 mb-6 animate-pulse">
+            <svg class="w-24 h-24 mx-auto mb-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Aucune élimination
+          </div>
+          <div class="text-2xl text-gray-300 mb-10">
+            Le village n'a pas réussi à se mettre d'accord.
           </div>
 
           <!-- Timer -->
@@ -760,6 +889,7 @@
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- Modal de détail du rôle -->
@@ -770,12 +900,81 @@
       :player-count="connectedUsers.length" @close="showRoleSelectionModal = false"
       @start-game-auto="startGameWithAutoBalance" @start-game-manual="startGameWithManualRoles" />
 
-    <CupidActionModal :show="false" :players="connectedUsers" :deadPlayers="deadPlayers"
-      :currentUsername="socketStore.username" :timeLeft="clientTimer" @submit="submitCupidAction"
-      @close="showCupidModal = false" />
+    <div v-if="showLoverDeathAnimation"
+      class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300"
+      :class="{ 'opacity-100': showLoverDeathAnimation, 'opacity-0': !showLoverDeathAnimation }">
+      <div class="text-center max-w-xl">
+        <div class="space-y-8 transform transition-all duration-700 ease-out"
+          :class="{ 'opacity-100 translate-y-0': showLoverDeathAnimation, 'opacity-0 translate-y-10': !showLoverDeathAnimation }">
+          <h2 class="text-5xl font-bold text-pink-400 mb-6">Mort par chagrin</h2>
 
-    <LoverDeathModal :show="showLoverDeathModal" :victim="loverVictim" :role="loverVictimRole"
-      :roleDetails="loverRoleDetails" @close="showLoverDeathModal = false" />
+          <!-- Animation du coeur brisé -->
+          <div class="relative mx-auto w-40 h-40 mb-4">
+            <img src="/assets/avatar_default2.png" :alt="loverVictim"
+              class="w-40 h-40 rounded-full border-4 border-pink-400 opacity-80 transition-all duration-500"
+              :class="{ 'grayscale': loverHeartbreakStep >= 1 }">
+
+            <!-- Coeur brisé -->
+            <div class="absolute inset-0 flex items-center justify-center">
+              <img src="/assets/coeur_rose.png" alt="Coeur brisé" class="w-32 h-32 transition-all duration-1000"
+                :class="{ 'scale-0 opacity-0': loverHeartbreakStep >= 1, 'scale-110': loverHeartbreakStep === 0 }">
+            </div>
+          </div>
+
+          <!-- Nom de l'amoureux -->
+          <div class="text-4xl font-bold text-gray-300">
+            {{ loverVictim }} est mort(e) de chagrin!
+          </div>
+
+          <!-- Révélation du rôle -->
+          <transition enter-active-class="transition duration-1000 transform" enter-from-class="opacity-0 scale-75"
+            enter-to-class="opacity-100 scale-100" appear>
+            <div v-if="loverHeartbreakStep >= 2" class="mt-10 space-y-4">
+              <!-- Titre de la révélation -->
+              <h3 class="text-2xl text-gray-400 mb-2">Révélation du rôle</h3>
+
+              <!-- Icône du rôle -->
+              <div v-if="loverRoleDetails" class="relative inline-block mb-2">
+                <div class="absolute -inset-2 rounded-full opacity-50" :class="{
+                  'bg-red-500/20 animate-pulse': loverVictimRole?.camp === 'Loups-Garous',
+                  'bg-blue-500/20 animate-pulse': loverVictimRole?.camp === 'Villageois',
+                  'bg-yellow-500/20 animate-pulse': loverVictimRole?.camp === 'Neutre'
+                }"></div>
+                <img :src="loverRoleDetails.icon" :alt="loverVictimRole?.role"
+                  class="w-24 h-24 mx-auto rounded-full border-4 relative" :class="{
+                    'border-red-400': loverVictimRole?.camp === 'Loups-Garous',
+                    'border-blue-400': loverVictimRole?.camp === 'Villageois',
+                    'border-yellow-400': loverVictimRole?.camp === 'Neutre'
+                  }">
+              </div>
+
+              <!-- Nom du rôle avec animation de texte -->
+              <div class="text-3xl font-bold animate-pulse" :class="{
+                'text-red-400': loverVictimRole?.camp === 'Loups-Garous',
+                'text-blue-400': loverVictimRole?.camp === 'Villageois',
+                'text-yellow-400': loverVictimRole?.camp === 'Neutre'
+              }">
+                {{ loverVictimRole?.role }}
+              </div>
+
+              <!-- Camp du joueur -->
+              <div class="mt-2 px-6 py-2 rounded-full inline-block" :class="{
+                'bg-red-500/10 text-red-400': loverVictimRole?.camp === 'Loups-Garous',
+                'bg-blue-500/10 text-blue-400': loverVictimRole?.camp === 'Villageois',
+                'bg-yellow-500/10 text-yellow-400': loverVictimRole?.camp === 'Neutre'
+              }">
+                {{ loverVictimRole?.camp }}
+              </div>
+            </div>
+          </transition>
+
+          <!-- Timer pour fermeture automatique -->
+          <div v-if="loverDeathCloseTimer > 0" class="mt-8 text-gray-400 text-sm">
+            Ce message se fermera dans {{ loverDeathCloseTimer }}s
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -845,13 +1044,19 @@ export default {
     const showCupidModal = ref(false);
     const lovers = ref(null);
     const myLover = ref(null);
-    const showLoverDeathModal = ref(false);
     const loverVictim = ref(null);
     const loverVictimRole = ref(null);
     const currentNightSubPhase = ref('');
     const cupidSelectionActive = ref(false);
     const selectedLovers = ref([]);
     const cupidNotification = ref('');
+    const showLoverDeathAnimation = ref(false);
+    const loverHeartbreakStep = ref(0);
+    const loverDeathCloseTimer = ref(0);
+    let loverDeathTimerInterval = null;
+    const pendingLoverDeath = ref(false);
+    const animationStage = ref(0);
+    let animationTimer = null;
 
 
     const hasUsername = computed(() => !!socketStore.username);
@@ -1125,6 +1330,129 @@ export default {
       cupidSelectionActive.value = false;
     };
 
+    const notifyAnimationCompleted = (animationId) => {
+      socketStore.socket.emit('animationCompleted', {
+        animationId,
+        room: props.roomCode
+      });
+    };
+
+    const startLoverDeathAnimation = () => {
+      // Vérifier qu'on a bien les infos nécessaires
+      if (!loverVictim.value || !loverVictimRole.value) return;
+
+      // S'assurer que l'écran d'annonce précédent est masqué
+      showAnnounceScreen.value = false;
+
+      // Réinitialiser l'état de l'animation
+      loverHeartbreakStep.value = 0;
+
+      // Afficher l'animation
+      showLoverDeathAnimation.value = true;
+
+      // Séquence d'animation: d'abord le cœur qui se brise
+      setTimeout(() => {
+        loverHeartbreakStep.value = 1;
+
+        // Puis révéler le rôle
+        setTimeout(() => {
+          loverHeartbreakStep.value = 2;
+
+          // Démarrer le timer de fermeture automatique (réduit à 5 secondes)
+          loverDeathCloseTimer.value = 5;
+          loverDeathTimerInterval = setInterval(() => {
+            loverDeathCloseTimer.value--;
+            if (loverDeathCloseTimer.value <= 0) {
+              clearInterval(loverDeathTimerInterval);
+              closeLoverDeathAnimation();
+            }
+          }, 1000);
+        }, 1500);
+      }, 1500);
+    };
+
+    const closeLoverDeathAnimation = () => {
+      showLoverDeathAnimation.value = false;
+      loverHeartbreakStep.value = 0;
+
+      // Nettoyer l'intervalle s'il existe
+      if (loverDeathTimerInterval) {
+        clearInterval(loverDeathTimerInterval);
+        loverDeathTimerInterval = null;
+      }
+
+      // Réinitialiser les variables
+      loverVictim.value = null;
+      loverVictimRole.value = null;
+      pendingLoverDeath.value = false;
+
+      // Informer le serveur que l'animation est terminée
+      socketStore.socket.emit('animationCompleted', {
+        animationId: 'loverDeath',
+        room: props.roomCode
+      });
+    };
+
+    // Fonction pour obtenir une citation thématique selon le rôle
+    const getThematicQuote = (roleName) => {
+      const quotes = {
+        'Loup-Garou': "La lune révèle à présent ce que l'obscurité dissimulait.",
+        'Voyante': "Les étoiles avaient prédit ce destin funeste.",
+        'Sorcière': "Les herbes et potions ne peuvent plus rien pour celui qui s'en va.",
+        'Cupidon': "Même l'amour ne peut triompher de la mort.",
+        'Chasseur': "Le chasseur est devenu la proie.",
+        'Villageois': "Un innocent de plus succombe à la peur collective.",
+        'Joueur de Flûte': "Sa mélodie résonnera à jamais dans le silence.",
+        'Corbeau': "Les présages sombres ne mentent jamais.",
+        'Ancien': "Sa sagesse sera à jamais perdue.",
+        'Bouc Émissaire': "Le sacrifice d'un innocent n'apaise pas les peurs.",
+        'Salvateur': "Celui qui protégeait les autres n'a pu se sauver lui-même.",
+        'Infect Père des Loups': "Même les créatures les plus redoutables connaissent la fin.",
+        'Renard': "La ruse ne suffit pas toujours à échapper au destin."
+      };
+
+      return quotes[roleName] || "Le village ne sera plus jamais le même...";
+    };
+
+    // Fonction pour gérer l'animation d'annonce de mort
+    const startDeathAnimation = () => {
+      // Réinitialiser l'animation
+      animationStage.value = 0;
+
+      // Nettoyer le timer précédent si existant
+      if (animationTimer) {
+        clearTimeout(animationTimer);
+      }
+
+      // Séquence d'animation
+      const sequence = [
+        { stage: 1, delay: 500 },    // Zoom sur avatar + battements
+        { stage: 2, delay: 1000 },   // Brume + grayscale
+        { stage: 3, delay: 1000 },   // Gouttes de sang + texte
+        { stage: 4, delay: 1000 },   // Fissures + tremblement
+        { stage: 5, delay: 1000 },   // Apparition carte de tarot
+        { stage: 6, delay: 1500 },   // Flou et début morph
+        { stage: 7, delay: 1000 },   // Retournement carte + couleur fond
+        { stage: 8, delay: 1000 }    // Timer
+      ];
+
+      // Exécuter la séquence
+      let cumulativeDelay = 0;
+
+      sequence.forEach(step => {
+        cumulativeDelay += step.delay;
+
+        setTimeout(() => {
+          animationStage.value = step.stage;
+
+          // Dernière étape - attendre le timer pour la prochaine phase
+          if (step.stage === sequence.length) {
+            // Le timer est déjà géré par le serveur
+          }
+        }, cumulativeDelay);
+      });
+    };
+
     onMounted(() => {
       window.addEventListener("beforeunload", handleBeforeUnload);
       socketStore.socket.emit("checkRoom", props.roomCode);
@@ -1273,9 +1601,6 @@ export default {
               dayVictimRole.value = rolesData.value.players.find(
                 player => player.pseudo === victim
               );
-
-              // Réinitialiser pour l'animation de révélation
-              showVictimRole.value = false;
             }
           } else {
             dayVictim.value = null;
@@ -1297,12 +1622,11 @@ export default {
           // Afficher l'écran d'annonce seulement après la transition si on est en phase announce
           if (phase === 'announce') {
             showAnnounceScreen.value = true;
+            pendingLoverDeath.value = false;
 
-            // Programmer l'animation de révélation du rôle
+            // Démarrer l'animation d'annonce de mort si un joueur est mort
             if (dayVictim.value) {
-              setTimeout(() => {
-                showVictimRole.value = true;
-              }, 2500);
+              startDeathAnimation();
             }
           }
 
@@ -1347,6 +1671,16 @@ export default {
         clientTimerInterval.value = setInterval(() => {
           if (clientTimer.value > 0) {
             clientTimer.value--;
+          } else if (phase === 'announce' && pendingLoverDeath.value && !showLoverDeathAnimation.value) {
+            // Quand le timer arrive à 0 :
+            // 1. D'abord, on cache l'écran d'annonce de la première mort
+            showAnnounceScreen.value = false;
+
+            // 2. Petit délai pour s'assurer que l'animation précédente est bien terminée
+            setTimeout(() => {
+              // 3. Ensuite on affiche l'animation de mort par chagrin
+              startLoverDeathAnimation();
+            }, 50); // Un court délai est suffisant
           }
         }, 1000);
       });
@@ -1373,10 +1707,25 @@ export default {
         // Mettre à jour la liste des morts
         deadPlayers.value = updatedDeadPlayers;
 
-        // Afficher l'animation de mort par chagrin
+        // Stocke les infos pour l'animation qui sera lancée plus tard
         loverVictim.value = lover;
         loverVictimRole.value = loverRole;
-        showLoverDeathModal.value = true;
+        pendingLoverDeath.value = true;
+      });
+
+      socketStore.socket.on('waitForLoverDeath', ({ expectedDuration }) => {
+        // Marquer qu'on attend une animation de mort par chagrin
+        pendingLoverDeath.value = true;
+
+        // Failsafe: Si l'animation n'est pas lancée après un certain temps, envoyer quand même l'événement de fin
+        setTimeout(() => {
+          if (pendingLoverDeath.value && !showLoverDeathAnimation.value) {
+            socketStore.socket.emit('animationCompleted', {
+              animationId: 'loverDeath',
+              room: props.roomCode
+            });
+          }
+        }, expectedDuration + 2000); // Ajouter 2 secondes de marge
       });
 
       socketStore.socket.on('cupidActionCompleted', () => {
@@ -1431,9 +1780,18 @@ export default {
       socketStore.socket.off('loverDeath');
       socketStore.socket.off('cupidActionCompleted');
       socketStore.socket.off('actionError');
+      socketStore.socket.off('waitForLoverDeath');
 
       if (clientTimerInterval.value) {
         clearInterval(clientTimerInterval.value);
+      }
+
+      if (loverDeathTimerInterval) {
+        clearInterval(loverDeathTimerInterval);
+      }
+
+      if (animationTimer) {
+        clearTimeout(animationTimer);
       }
     });
 
@@ -1558,7 +1916,6 @@ export default {
       showCupidModal,
       lovers,
       myLover,
-      showLoverDeathModal,
       loverVictim,
       loverVictimRole,
       loverRoleDetails,
@@ -1573,6 +1930,15 @@ export default {
       handleCupidSelection,
       confirmCupidSelection,
       cancelCupidSelection,
+      showLoverDeathAnimation,
+      loverHeartbreakStep,
+      loverDeathCloseTimer,
+      startLoverDeathAnimation,
+      closeLoverDeathAnimation,
+      showAnnounceScreen,
+      pendingLoverDeath,
+      animationStage,
+      getThematicQuote,
     };
   },
 };
@@ -1611,5 +1977,234 @@ export default {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Animation de pulsation pour l'avatar */
+@keyframes avatarPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.avatar-pulse {
+  animation: avatarPulse 0.8s ease-in-out infinite;
+}
+
+/* Animation de battement de cœur avec flash rouge */
+@keyframes heartbeatFlash {
+
+  0%,
+  100% {
+    background-color: rgba(127, 29, 29, 0);
+  }
+
+  50% {
+    background-color: rgba(127, 29, 29, 0.3);
+  }
+}
+
+.heartbeat-flash {
+  animation: heartbeatFlash 0.8s ease-in-out infinite;
+}
+
+/* Animation pour l'apparition des fissures */
+@keyframes crackGrow {
+  0% {
+    opacity: 0;
+    height: 0;
+  }
+
+  100% {
+    opacity: 0.7;
+    height: 200px;
+  }
+}
+
+.crack-line {
+  animation: crackGrow 1.5s ease-out forwards;
+}
+
+/* Animation pour les gouttes de sang */
+@keyframes bloodDrip {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  10% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(120vh);
+  }
+}
+
+.animate-blood-drip {
+  animation: bloodDrip 4s ease-in forwards;
+}
+
+/* Animation pour les particules de brouillard */
+@keyframes fogExpand {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2) rotate(45deg);
+  }
+}
+
+.fog-particle {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  border-radius: 50%;
+}
+
+.animate-fog {
+  animation: fogExpand 5s ease-out forwards;
+}
+
+/* Animation de tremblement d'écran */
+@keyframes screenShake {
+
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  10% {
+    transform: translate(-5px, -5px);
+  }
+
+  20% {
+    transform: translate(5px, 5px);
+  }
+
+  30% {
+    transform: translate(-3px, 3px);
+  }
+
+  40% {
+    transform: translate(3px, -3px);
+  }
+
+  50% {
+    transform: translate(-2px, -2px);
+  }
+
+  60% {
+    transform: translate(2px, 2px);
+  }
+
+  70% {
+    transform: translate(-1px, 1px);
+  }
+
+  80% {
+    transform: translate(1px, -1px);
+  }
+
+  90% {
+    transform: translate(-1px, -1px);
+  }
+}
+
+.animate-screen-shake {
+  animation: screenShake 0.5s ease-in-out;
+}
+
+/* Animation pour l'entrée du titre */
+@keyframes titleSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.title-slide-in {
+  animation: titleSlideIn 1s ease-out forwards;
+}
+
+/* Animation de fondu pour le texte */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.text-fade-in {
+  transition: opacity 1s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1.5s ease-out forwards;
+}
+
+/* Style pour la carte de tarot */
+.perspective-container {
+  perspective: 1000px;
+  width: 64px;
+  height: 96px;
+  margin: 0 auto;
+  transform: scale(1);
+}
+
+.tarot-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.tarot-card-front,
+.tarot-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+
+.tarot-card-back {
+  transform: rotateY(180deg);
+}
+
+.card-flip {
+  transform: rotateY(180deg);
+}
+
+/* Animation pour le texte narratif */
+.narrative-text {
+  position: relative;
+  overflow: hidden;
+}
+
+.quote-text {
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+  letter-spacing: 0.5px;
+  line-height: 1.6;
 }
 </style>

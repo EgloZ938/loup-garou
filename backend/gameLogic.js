@@ -94,7 +94,9 @@ class Game {
         this.nightVictim = null;
         this.dayVictim = null;
 
-        // Données des rôles (depuis rolesData.js)
+        this.transitioningToNight = false;
+
+        // Données des rôles
         this.rolesData = {
             "Voyante": { camp: "Villageois", ordre: 6 },
             "Loup-Garou": { camp: "Loups-Garous", ordre: 3 },
@@ -448,7 +450,7 @@ class Game {
             this.sendSystemMessage(`Le village a décidé d'éliminer ${victim}!`);
             this.sendSystemMessage(`C'était un ${role.role} du camp des ${role.camp}.`);
 
-            // Gérer la mort du joueur (et potentiellement de son amoureux)
+            // Gérer la mort du joueur (et potentiellement son amoureux)
             this.handlePlayerDeath(victim, 'vote');
         } else {
             this.sendSystemMessage("Le village n'a pas réussi à se mettre d'accord. Personne n'est éliminé.");
@@ -463,6 +465,7 @@ class Game {
             deadPlayers: this.deadPlayers
         });
 
+        // Utiliser un simple timer pour passer à la phase suivante
         this.phaseTimer = setInterval(() => {
             this.phaseTimeLeft--;
 
@@ -473,10 +476,46 @@ class Game {
 
             if (this.phaseTimeLeft <= 0) {
                 clearInterval(this.phaseTimer);
-                this.startNightPhase(); // Passage à la phase de nuit
+
+                // Vérifier si un joueur amoureux a été tué (l'autre mourra aussi)
+                const hasLoverDeath = this.checkPendingLoverDeath();
+
+                if (hasLoverDeath) {
+                    // Si un amoureux doit mourir, on attendra l'animation
+                    this.io.to(this.roomCode).emit('waitForLoverDeath', {
+                        expectedDuration: 10000 // 10 secondes pour l'animation de mort d'amoureux
+                    });
+
+                    // Mais on passe quand même à la phase suivante après un délai plus long
+                    setTimeout(() => {
+                        this.startNightPhase();
+                    }, 10000); // 10 secondes supplémentaires
+                } else {
+                    // Passer à la phase suivante après le délai normal
+                    setTimeout(() => {
+                        this.startNightPhase();
+                    }, 500); // Petit délai pour l'animation
+                }
             }
         }, 1000);
     }
+
+    checkPendingLoverDeath() {
+        // Si cette information est déjà stockée dans une propriété, on peut la récupérer
+        // Sinon, on peut vérifier si l'un des amoureux a été tué récemment
+
+        // Exemple de vérification (à adapter selon votre implémentation)
+        if (this.lovers && this.dayVictim) {
+            // Si la victime est l'un des amoureux
+            if (this.lovers[0] === this.dayVictim || this.lovers[1] === this.dayVictim) {
+                // L'autre amoureux va mourir de chagrin
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     // Méthode pour compter les votes et déterminer la victime
     countVotes() {
@@ -555,20 +594,33 @@ class Game {
 
     // Méthode pour gérer la mort d'un joueur et potentiellement de son amoureux
     handlePlayerDeath(player, cause = 'default') {
-        // Ajouter à la liste des morts s'il n'y est pas déjà
         if (!this.deadPlayers.includes(player)) {
             this.deadPlayers.push(player);
 
             // Vérifier si le joueur était amoureux
             if (this.lovers && (this.lovers[0] === player || this.lovers[1] === player)) {
                 const otherLover = this.lovers[0] === player ? this.lovers[1] : this.lovers[0];
+
+                // Si l'autre amoureux n'est pas déjà mort
                 if (!this.deadPlayers.includes(otherLover)) {
-                    // Délai plus long pour laisser le temps à l'annonce principale de se terminer
+                    // On stocke l'information qu'un amoureux va mourir
+                    this.pendingLoverDeath = {
+                        victim: player,
+                        lover: otherLover,
+                        loverRole: this.getPlayerRole(otherLover)
+                    };
+
+                    // Délai pour créer l'effet de suspense
                     setTimeout(() => {
                         const loverRole = this.getPlayerRole(otherLover);
+
+                        // Message d'annonce
+                        this.sendSystemMessage("Une trouble agitation parcourt le village...");
+
+                        // Mettre à jour la liste des morts
                         this.deadPlayers.push(otherLover);
 
-                        // Envoyer d'abord l'événement de mort pour la séquence visuelle
+                        // Envoyer l'événement pour l'animation côté client
                         this.io.to(this.roomCode).emit('loverDeath', {
                             victim: player,
                             lover: otherLover,
@@ -576,12 +628,12 @@ class Game {
                             deadPlayers: this.deadPlayers
                         });
 
-                        // Puis envoyer les messages système
+                        // Envoyer les messages après un court délai
                         setTimeout(() => {
                             this.sendSystemMessage(`${otherLover} meurt de chagrin suite à la perte de son amour!`);
                             this.sendSystemMessage(`C'était un ${loverRole.role} du camp des ${loverRole.camp}.`);
-                        }, 1500);
-                    }, 5000);
+                        }, 1000);
+                    }, 8000); // Attendre que l'animation de la première mort soit terminée
                 }
             }
         }

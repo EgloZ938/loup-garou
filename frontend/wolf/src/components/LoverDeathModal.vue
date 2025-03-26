@@ -14,7 +14,7 @@
                     <!-- Coeur brisé -->
                     <div class="absolute inset-0 flex items-center justify-center">
                         <img src="/assets/coeur_rose.png" alt="Coeur brisé"
-                            class="w-32 h-32 transition-all duration-3000"
+                            class="w-32 h-32 transition-all duration-1500"
                             :class="{ 'animate-heartbreak': showHeartbreak }">
                     </div>
                 </div>
@@ -102,7 +102,7 @@ export default {
             default: ''
         }
     },
-    emits: ['close'],
+    emits: ['close', 'animationCompleted'],
     setup(props, { emit }) {
         const showHeartbreak = ref(false);
         const showRole = ref(false);
@@ -123,17 +123,18 @@ export default {
                 setTimeout(() => {
                     showRole.value = true;
 
-                    // Démarrer le timer de fermeture automatique
-                    autoCloseTimer.value = 10;
+                    // Démarrer le timer de fermeture automatique - RÉDUIT DE 10s À 6s
+                    autoCloseTimer.value = 6;
                     timerInterval = setInterval(() => {
                         autoCloseTimer.value--;
                         if (autoCloseTimer.value <= 0) {
                             clearInterval(timerInterval);
                             emit('close');
+                            emit('animationCompleted', 'loverDeath');
                         }
                     }, 1000);
-                }, 2500);
-            }, 1500);
+                }, 1500);
+            }, 1000);
         };
 
         // Réinitialiser les animations quand le modal se ferme
@@ -182,7 +183,7 @@ export default {
 </script>
 
 <style scoped>
-/* Animation du cœur qui se brise */
+/* Animation du cœur qui se brise - ACCÉLÉRÉE */
 @keyframes heartbreak {
     0% {
         transform: scale(1);
@@ -218,7 +219,7 @@ export default {
 }
 
 .animate-heartbreak {
-    animation: heartbreak 3s forwards;
+    animation: heartbreak 2s forwards;
 }
 
 /* Animation de pulsation */
