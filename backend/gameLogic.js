@@ -75,7 +75,7 @@ class Game {
         // Durée des phases en secondes
         this.dayDuration = 30;
         this.voteDuration = 30;
-        this.announceDuration = 10;
+        this.announceDuration = 20;
         this.nightDuration = 30;
 
         // Durée des différentes sous-phases de nuit en secondes
@@ -443,6 +443,7 @@ class Game {
         // Compter les votes et déterminer la victime
         this.dayVictim = this.countVotes();
 
+        // Gérer l'annonce selon qu'il y a une victime ou non
         if (this.dayVictim) {
             const victim = this.dayVictim;
             const role = this.getPlayerRole(victim);
@@ -450,54 +451,71 @@ class Game {
             this.sendSystemMessage(`Le village a décidé d'éliminer ${victim}!`);
             this.sendSystemMessage(`C'était un ${role.role} du camp des ${role.camp}.`);
 
-            // Gérer la mort du joueur (et potentiellement son amoureux)
+            // Gérer la mort du joueur
             this.handlePlayerDeath(victim, 'vote');
         } else {
             this.sendSystemMessage("Le village n'a pas réussi à se mettre d'accord. Personne n'est éliminé.");
         }
 
-        // Notification aux clients
+        // Déterminer si une animation d'amoureux est prévue
+        this.pendingLoverAnimation = this.checkPendingLoverDeath();
+
+        // Notification aux clients avec toutes les infos nécessaires
         this.io.to(this.roomCode).emit('phaseChanged', {
             phase: 'announce',
             timeLeft: this.phaseTimeLeft,
             turn: this.currentTurn,
             victim: this.dayVictim,
-            deadPlayers: this.deadPlayers
+            deadPlayers: this.deadPlayers,
+            pendingLoverDeath: this.pendingLoverAnimation
         });
 
-        // Utiliser un simple timer pour passer à la phase suivante
+        // Timer unifié et robuste
         this.phaseTimer = setInterval(() => {
             this.phaseTimeLeft--;
 
+            // Mise à jour régulière du timer côté client
             this.io.to(this.roomCode).emit('timerUpdate', {
                 timeLeft: this.phaseTimeLeft,
-                phase: this.currentPhase
+                phase: this.currentPhase,
+                pendingLoverDeath: this.pendingLoverAnimation
             });
 
+            // À la fin du timer
             if (this.phaseTimeLeft <= 0) {
                 clearInterval(this.phaseTimer);
 
-                // Vérifier si un joueur amoureux a été tué (l'autre mourra aussi)
-                const hasLoverDeath = this.checkPendingLoverDeath();
+                // Signal de fin du timer d'animation
+                this.io.to(this.roomCode).emit('announceAnimationTimer', {
+                    completed: true,
+                    pendingLoverDeath: this.pendingLoverAnimation
+                });
 
-                if (hasLoverDeath) {
-                    // Si un amoureux doit mourir, on attendra l'animation
-                    this.io.to(this.roomCode).emit('waitForLoverDeath', {
-                        expectedDuration: 10000 // 10 secondes pour l'animation de mort d'amoureux
-                    });
-
-                    // Mais on passe quand même à la phase suivante après un délai plus long
-                    setTimeout(() => {
-                        this.startNightPhase();
-                    }, 10000); // 10 secondes supplémentaires
+                // Si une mort d'amoureux est prévue
+                if (this.pendingLoverAnimation) {
+                    // Déclencher l'animation de mort par amour
+                    this.io.to(this.roomCode).emit('triggerLoverDeathAnimation');
+                    // La phase suivante sera lancée via animationCompleted
                 } else {
-                    // Passer à la phase suivante après le délai normal
-                    setTimeout(() => {
-                        this.startNightPhase();
-                    }, 500); // Petit délai pour l'animation
+                    // Sinon, passer directement à la phase de nuit
+                    this.startNightPhase();
                 }
             }
         }, 1000);
+    }
+
+    handleAnimationCompleted(animationId) {
+        console.log(`Animation completed: ${animationId}`);
+
+        if (animationId === 'loverDeath') {
+            // Passer à la phase de nuit quand l'animation de mort par amour est terminée
+            this.startNightPhase();
+        } else if (animationId === 'deathAnnounce') {
+            // Si l'animation principale est terminée et qu'il y a un amoureux à tuer
+            if (this.pendingLoverAnimation) {
+                this.io.to(this.roomCode).emit('triggerLoverDeathAnimation');
+            }
+        }
     }
 
     checkPendingLoverDeath() {
@@ -633,7 +651,7 @@ class Game {
                             this.sendSystemMessage(`${otherLover} meurt de chagrin suite à la perte de son amour!`);
                             this.sendSystemMessage(`C'était un ${loverRole.role} du camp des ${loverRole.camp}.`);
                         }, 1000);
-                    }, 8000); // Attendre que l'animation de la première mort soit terminée
+                    }, 15000); // Modifié pour attendre complètement la fin de l'animation
                 }
             }
         }

@@ -529,6 +529,14 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('animationCompleted', ({ animationId, room }) => {
+        const game = gameManager.getGame(room);
+        if (game) {
+            // Appeler la méthode du gestionnaire d'animation
+            game.handleAnimationCompleted(animationId);
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Un utilisateur s\'est déconnecté');
 

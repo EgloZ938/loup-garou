@@ -660,7 +660,7 @@
 
       <!-- Annonce du résultat du vote -->
       <div v-if="gamePhase === 'announce' && showAnnounceScreen && dayVictim"
-        class="fixed inset-0 overflow-hidden flex items-center justify-center p-4 z-40 transition-opacity duration-300"
+        class="fixed inset-0 overflow-hidden flex items-center justify-center p-4 z-40 transition-all duration-500"
         :class="[
           { 'opacity-100': showAnnounceScreen, 'opacity-0 pointer-events-none': !showAnnounceScreen },
           {
@@ -807,17 +807,15 @@
                   'bg-gradient-to-br from-blue-950 to-blue-800 border-2 border-blue-500/30': dayVictimRole?.camp === 'Villageois',
                   'bg-gradient-to-br from-yellow-950 to-yellow-900 border-2 border-yellow-500/30': dayVictimRole?.camp === 'Neutre'
                 }">
-
-                  <!-- Contenu de la carte retournée -->
-                  <div v-if="getVictimRoleDetails()" class="text-center">
+                  <!-- Contenu de la carte retournée avec animation d'apparition -->
+                  <div v-if="getVictimRoleDetails()" class="text-center card-content-reveal">
                     <!-- Icône du rôle -->
                     <div class="relative inline-block mb-4 w-20 h-20">
                       <div class="absolute -inset-1 rounded-full opacity-50" :class="{
                         'bg-red-500/20 animate-pulse': dayVictimRole?.camp === 'Loups-Garous',
                         'bg-blue-500/20 animate-pulse': dayVictimRole?.camp === 'Villageois',
                         'bg-yellow-500/20 animate-pulse': dayVictimRole?.camp === 'Neutre'
-                      }">
-                      </div>
+                      }"></div>
                       <img :src="getVictimRoleDetails()?.icon" :alt="dayVictimRole?.role"
                         class="w-full h-full rounded-full border-2 relative object-cover" :class="{
                           'border-red-400': dayVictimRole?.camp === 'Loups-Garous',
@@ -901,7 +899,7 @@
       @start-game-auto="startGameWithAutoBalance" @start-game-manual="startGameWithManualRoles" />
 
     <div v-if="showLoverDeathAnimation"
-      class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-opacity duration-300"
+      class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-all duration-500"
       :class="{ 'opacity-100': showLoverDeathAnimation, 'opacity-0': !showLoverDeathAnimation }">
       <div class="text-center max-w-xl">
         <div class="space-y-8 transform transition-all duration-700 ease-out"
@@ -969,11 +967,24 @@
           </transition>
 
           <!-- Timer pour fermeture automatique -->
-          <div v-if="loverDeathCloseTimer > 0" class="mt-8 text-gray-400 text-sm">
+          <div v-if="loverHeartbreakStep >= 2 && loverDeathCloseTimer > 0" class="mt-8 text-gray-400 text-sm">
             Ce message se fermera dans {{ loverDeathCloseTimer }}s
           </div>
         </div>
       </div>
+      <div v-if="showLoverDeathAnimation && loverHeartbreakStep >= 2 && loverDeathCloseTimer <= 0"
+        class="mt-8 text-center">
+        <button @click="closeLoverDeathAnimation"
+          class="mt-4 px-4 py-2 bg-gray-700/70 hover:bg-gray-700/90 text-gray-300 rounded-lg transition-all hover:scale-105">
+          Fermer
+        </button>
+      </div>
+    </div>
+
+    <div v-if="errorNotification"
+      class="fixed bottom-4 right-4 bg-red-900/70 text-red-200 px-4 py-2 rounded-lg shadow-lg z-50 transform transition-all duration-300"
+      :class="{ 'translate-y-0 opacity-100': errorNotification, 'translate-y-10 opacity-0': !errorNotification }">
+      {{ errorNotification }}
     </div>
   </div>
 </template>
@@ -988,6 +999,7 @@ import RoleDetailModal from '@/components/RoleDetailModal.vue';
 import RoleSelectionModal from '@/components/RoleSelectionModal.vue';
 import CupidActionModal from '@/components/CupidActionModal.vue';
 import LoverDeathModal from '@/components/LoverDeathModal.vue';
+import { animationManager, createDeathAnnounceSequence, createLoverDeathSequence } from '@/utils/AnimationManager';
 
 export default {
   components: {
@@ -1057,6 +1069,9 @@ export default {
     const pendingLoverDeath = ref(false);
     const animationStage = ref(0);
     let animationTimer = null;
+    const animationCompleted = ref(false);
+    const pendingLoverDeathAnnounce = ref(false);
+    const errorNotification = ref("");
 
 
     const hasUsername = computed(() => !!socketStore.username);
@@ -1338,60 +1353,76 @@ export default {
     };
 
     const startLoverDeathAnimation = () => {
-      // Vérifier qu'on a bien les infos nécessaires
-      if (!loverVictim.value || !loverVictimRole.value) return;
+      // Vérifier les prérequis
+      if (!loverVictim.value || !loverVictimRole.value) {
+        errorNotification.value = "Données manquantes pour l'animation d'amoureux";
+        setTimeout(() => { errorNotification.value = ""; }, 3000);
+        return;
+      }
 
-      // S'assurer que l'écran d'annonce précédent est masqué
+      // Cacher l'écran précédent et initialiser
       showAnnounceScreen.value = false;
-
-      // Réinitialiser l'état de l'animation
       loverHeartbreakStep.value = 0;
-
-      // Afficher l'animation
+      loverDeathCloseTimer.value = 5; // Initialiser avec une valeur par défaut
       showLoverDeathAnimation.value = true;
 
-      // Séquence d'animation: d'abord le cœur qui se brise
-      setTimeout(() => {
-        loverHeartbreakStep.value = 1;
+      // Utiliser la séquence prédéfinie avec un timer plus explicite
+      const sequence = createLoverDeathSequence();
 
-        // Puis révéler le rôle
-        setTimeout(() => {
-          loverHeartbreakStep.value = 2;
+      // Démarrer via animationManager
+      animationManager.startSequence('loverDeathAnimation', sequence, closeLoverDeathAnimation);
 
-          // Démarrer le timer de fermeture automatique (réduit à 5 secondes)
-          loverDeathCloseTimer.value = 5;
-          loverDeathTimerInterval = setInterval(() => {
-            loverDeathCloseTimer.value--;
-            if (loverDeathCloseTimer.value <= 0) {
-              clearInterval(loverDeathTimerInterval);
-              closeLoverDeathAnimation();
-            }
-          }, 1000);
-        }, 1500);
-      }, 1500);
+      // Écouter les étapes
+      const unsubscribe = animationManager.addListener('loverDeathAnimation', (event) => {
+        if (event.type === 'step') {
+          loverHeartbreakStep.value = event.step;
+
+          // Timer final pour la dernière étape avec une durée explicite
+          if (event.step === 3) {
+            animationManager.createTimer('loverDeathTimer', 5000,
+              (remaining) => {
+                loverDeathCloseTimer.value = Math.ceil(remaining / 1000);
+                console.log('Timer lover death: ' + loverDeathCloseTimer.value); // Debugging
+              },
+              () => {
+                // Fonction de callback quand le timer est terminé
+                closeLoverDeathAnimation();
+              }
+            );
+          }
+        }
+      });
+
+      // Nettoyage
+      onUnmounted(() => {
+        unsubscribe();
+        animationManager.stopAnimation('loverDeathAnimation');
+      });
     };
+
+
 
     const closeLoverDeathAnimation = () => {
       showLoverDeathAnimation.value = false;
       loverHeartbreakStep.value = 0;
+      loverDeathCloseTimer.value = 0;
 
-      // Nettoyer l'intervalle s'il existe
-      if (loverDeathTimerInterval) {
-        clearInterval(loverDeathTimerInterval);
-        loverDeathTimerInterval = null;
-      }
+      // Nettoyer les timers
+      animationManager.clearTimer('loverDeathTimer');
 
       // Réinitialiser les variables
       loverVictim.value = null;
       loverVictimRole.value = null;
       pendingLoverDeath.value = false;
+      pendingLoverDeathAnnounce.value = false;
 
-      // Informer le serveur que l'animation est terminée
+      // Informer le serveur
       socketStore.socket.emit('animationCompleted', {
         animationId: 'loverDeath',
         room: props.roomCode
       });
     };
+
 
     // Fonction pour obtenir une citation thématique selon le rôle
     const getThematicQuote = (roleName) => {
@@ -1416,41 +1447,72 @@ export default {
 
     // Fonction pour gérer l'animation d'annonce de mort
     const startDeathAnimation = () => {
-      // Réinitialiser l'animation
+      // Réinitialiser les états
       animationStage.value = 0;
 
-      // Nettoyer le timer précédent si existant
-      if (animationTimer) {
-        clearTimeout(animationTimer);
-      }
+      // Utiliser la séquence d'animation appropriée
+      const camp = dayVictimRole.value?.camp || 'Villageois';
+      const sequence = createDeathAnnounceSequence(camp);
 
-      // Séquence d'animation
-      const sequence = [
-        { stage: 1, delay: 500 },    // Zoom sur avatar + battements
-        { stage: 2, delay: 1000 },   // Brume + grayscale
-        { stage: 3, delay: 1000 },   // Gouttes de sang + texte
-        { stage: 4, delay: 1000 },   // Fissures + tremblement
-        { stage: 5, delay: 1000 },   // Apparition carte de tarot
-        { stage: 6, delay: 1500 },   // Flou et début morph
-        { stage: 7, delay: 1000 },   // Retournement carte + couleur fond
-        { stage: 8, delay: 1000 }    // Timer
-      ];
-
-      // Exécuter la séquence
-      let cumulativeDelay = 0;
-
-      sequence.forEach(step => {
-        cumulativeDelay += step.delay;
-
-        setTimeout(() => {
-          animationStage.value = step.stage;
-
-          // Dernière étape - attendre le timer pour la prochaine phase
-          if (step.stage === sequence.length) {
-            // Le timer est déjà géré par le serveur
-          }
-        }, cumulativeDelay);
+      // Utiliser animationManager pour démarrer la séquence
+      animationManager.startSequence('deathAnnounce', sequence, () => {
+        if (pendingLoverDeath.value) {
+          socketStore.socket.emit('animationCompleted', {
+            animationId: 'deathAnnounce',
+            room: props.roomCode
+          });
+        }
       });
+
+      // Écouter les mises à jour d'étapes
+      const unsubscribe = animationManager.addListener('deathAnnounce', (event) => {
+        if (event.type === 'step') {
+          animationStage.value = event.step;
+
+          // Configurer le timer final à l'étape appropriée
+          if (event.step === 7) {
+            clientTimer.value = 5;
+
+            // Utiliser animationManager pour le timer final
+            animationManager.createTimer('announceTimer', 5000,
+              (remaining) => {
+                clientTimer.value = Math.ceil(remaining / 1000);
+              }
+            );
+          }
+        }
+      });
+
+      // Nettoyage automatique
+      onUnmounted(() => {
+        unsubscribe();
+        animationManager.stopAnimation('deathAnnounce');
+      });
+    };
+
+
+    const setFinalTimerValue = () => {
+      // Fixer une valeur de 5 secondes pour la phase finale
+      clientTimer.value = 5;
+
+      // Créer un timer contrôlé via le gestionnaire d'animation
+      animationManager.createTimer('announceTimer', 5000,
+        // Callback de mise à jour (tick)
+        (remaining) => {
+          clientTimer.value = Math.ceil(remaining / 1000);
+        },
+        // Callback de fin
+        () => {
+          // Si une mort d'amoureux est en attente, la lancer maintenant
+          if (pendingLoverDeath.value) {
+            // Le serveur va envoyer un signal pour lancer cette animation
+            // via l'événement 'triggerLoverDeathAnimation'
+          } else {
+            // Sinon, passer à la phase suivante
+            showAnnounceScreen.value = false;
+          }
+        }
+      );
     };
 
     onMounted(() => {
@@ -1574,7 +1636,11 @@ export default {
         }, 1000);
       });
 
-      socketStore.socket.on('phaseChanged', ({ phase, timeLeft, turn, victim, deadPlayers: deadList }) => {
+      socketStore.socket.on('phaseChanged', ({ phase, timeLeft, turn, victim, deadPlayers: deadList, pendingLoverDeath: pendingLover }) => {
+        // Arrêter toute animation en cours
+        animationManager.stopAnimation('deathAnnounce');
+        animationManager.stopAnimation('loverDeathAnimation');
+
         // Animation de transition
         showPhaseTransition.value = true;
 
@@ -1584,6 +1650,7 @@ export default {
         // Stocker la phase cible pour la transition
         targetPhase.value = phase;
 
+        // Configuration du texte de transition selon la phase
         if (phase === 'night') {
           transitionText.value = 'La nuit tombe sur le village...';
         } else if (phase === 'day') {
@@ -1606,6 +1673,11 @@ export default {
             dayVictim.value = null;
             dayVictimRole.value = null;
           }
+
+          // Stocker si une mort d'amoureux est en attente
+          if (pendingLover !== undefined) {
+            pendingLoverDeath.value = pendingLover;
+          }
         }
 
         // Mise à jour des joueurs morts
@@ -1613,29 +1685,32 @@ export default {
           deadPlayers.value = deadList;
         }
 
-        // Après 3 secondes, masque la transition et applique la nouvelle phase
-        setTimeout(() => {
-          gamePhase.value = phase;
-          phaseTimer.value = timeLeft;
-          showPhaseTransition.value = false;
+        // Utiliser le gestionnaire d'animation pour gérer la transition
+        animationManager.createTimer('phaseTransition', animationManager.durations.phaseTransition,
+          null, // Pas de mise à jour pendant la transition
+          () => {
+            // Callback exécuté à la fin de la transition
+            gamePhase.value = phase;
+            phaseTimer.value = timeLeft;
+            showPhaseTransition.value = false;
 
-          // Afficher l'écran d'annonce seulement après la transition si on est en phase announce
-          if (phase === 'announce') {
-            showAnnounceScreen.value = true;
-            pendingLoverDeath.value = false;
+            // Afficher l'écran d'annonce seulement après la transition si on est en phase announce
+            if (phase === 'announce') {
+              showAnnounceScreen.value = true;
 
-            // Démarrer l'animation d'annonce de mort si un joueur est mort
-            if (dayVictim.value) {
-              startDeathAnimation();
+              // Démarrer l'animation d'annonce de mort si un joueur est mort
+              if (dayVictim.value) {
+                startDeathAnimation();
+              }
+            }
+
+            // Réinitialiser les votes au début d'une nouvelle phase de vote
+            if (phase === 'vote') {
+              votes.value = [];
+              currentVote.value = null;
             }
           }
-
-          // Réinitialiser les votes au début d'une nouvelle phase de vote
-          if (phase === 'vote') {
-            votes.value = [];
-            currentVote.value = null;
-          }
-        }, 3000);
+        );
       });
 
       socketStore.socket.on('voteUpdate', ({ votes: voteList }) => {
@@ -1649,7 +1724,7 @@ export default {
         }, 3000);
       });
 
-      socketStore.socket.on('timerUpdate', ({ timeLeft, phase, subPhase }) => {
+      socketStore.socket.on('timerUpdate', ({ timeLeft, phase, subPhase, pendingLoverDeath: pendingLover }) => {
         // Met à jour le timer serveur
         phaseTimer.value = timeLeft;
         gamePhase.value = phase;
@@ -1659,30 +1734,24 @@ export default {
           currentNightSubPhase.value = subPhase;
         }
 
-        // Réinitialise le timer client
-        clientTimer.value = timeLeft;
-
-        // Nettoie l'intervalle existant si nécessaire
-        if (clientTimerInterval.value) {
-          clearInterval(clientTimerInterval.value);
+        // Mettre à jour pendingLoverDeath si fourni
+        if (pendingLover !== undefined) {
+          pendingLoverDeath.value = pendingLover;
         }
 
-        // Démarre un timer local pour une animation fluide
-        clientTimerInterval.value = setInterval(() => {
-          if (clientTimer.value > 0) {
-            clientTimer.value--;
-          } else if (phase === 'announce' && pendingLoverDeath.value && !showLoverDeathAnimation.value) {
-            // Quand le timer arrive à 0 :
-            // 1. D'abord, on cache l'écran d'annonce de la première mort
-            showAnnounceScreen.value = false;
+        // Réinitialise le timer client de manière fiable
+        clientTimer.value = timeLeft;
 
-            // 2. Petit délai pour s'assurer que l'animation précédente est bien terminée
-            setTimeout(() => {
-              // 3. Ensuite on affiche l'animation de mort par chagrin
-              startLoverDeathAnimation();
-            }, 50); // Un court délai est suffisant
-          }
-        }, 1000);
+        // Mettre à jour le timer client via le gestionnaire d'animation
+        animationManager.clearTimer('clientPhaseTimer'); // Nettoyage du timer précédent
+
+        if (timeLeft > 0) {
+          animationManager.createTimer('clientPhaseTimer', timeLeft * 1000,
+            (remaining) => {
+              clientTimer.value = Math.ceil(remaining / 1000);
+            }
+          );
+        }
       });
 
       socketStore.socket.on('gameStateUpdate', (gameState) => {
@@ -1762,6 +1831,27 @@ export default {
         cupidSelectionActive.value = false;
       });
 
+      socketStore.socket.on('announceAnimationTimer', ({ completed, pendingLoverDeath: pendingLover }) => {
+        // Le timer est terminé mais on ne ferme pas encore l'animation
+        animationCompleted.value = completed;
+
+        if (pendingLover !== undefined) {
+          pendingLoverDeathAnnounce.value = pendingLover;
+        }
+      });
+
+      socketStore.socket.on('triggerLoverDeathAnimation', () => {
+        // À ce stade, l'animation principale doit être terminée
+        // Cacher l'écran d'annonce avant de démarrer l'animation d'amoureux
+        showAnnounceScreen.value = false;
+
+        // Utiliser le gestionnaire d'animation pour créer une transition fluide
+        animationManager.createTimer('loverDeathTransition', 500, null, () => {
+          // Démarrer l'animation de mort par amour
+          startLoverDeathAnimation();
+        });
+      });
+
     });
 
     onUnmounted(() => {
@@ -1781,6 +1871,15 @@ export default {
       socketStore.socket.off('cupidActionCompleted');
       socketStore.socket.off('actionError');
       socketStore.socket.off('waitForLoverDeath');
+
+      animationManager.clearTimer('clientPhaseTimer');
+      animationManager.clearTimer('announceTimer');
+      animationManager.clearTimer('loverDeathTimer');
+      animationManager.clearTimer('phaseTransition');
+      animationManager.clearTimer('loverDeathTransition');
+
+      animationManager.stopAnimation('deathAnnounce');
+      animationManager.stopAnimation('loverDeathAnimation');
 
       if (clientTimerInterval.value) {
         clearInterval(clientTimerInterval.value);
@@ -1939,6 +2038,9 @@ export default {
       pendingLoverDeath,
       animationStage,
       getThematicQuote,
+      animationCompleted,
+      pendingLoverDeathAnnounce,
+      errorNotification,
     };
   },
 };
@@ -2162,13 +2264,29 @@ export default {
   animation: fadeIn 1.5s ease-out forwards;
 }
 
+@keyframes cardReveal {
+  0% {
+    transform: rotateY(0) scale(1);
+  }
+
+  50% {
+    transform: rotateY(90deg) scale(1.1);
+  }
+
+  100% {
+    transform: rotateY(180deg) scale(1);
+  }
+}
+
 /* Style pour la carte de tarot */
 .perspective-container {
-  perspective: 1000px;
-  width: 64px;
-  height: 96px;
+  perspective: 1200px;
+  width: 264px;
+  /* Largeur exacte de votre carte */
+  height: 396px;
+  /* Hauteur exacte de votre carte (96px -> 396px pour correspondre à la valeur h-96) */
   margin: 0 auto;
-  transform: scale(1);
+  transform-style: preserve-3d;
 }
 
 .tarot-card {
@@ -2176,7 +2294,7 @@ export default {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: none;
 }
 
 .tarot-card-front,
@@ -2185,6 +2303,9 @@ export default {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
+  display: flex;
+  justify-content: center;
+  transform-style: preserve-3d;
 }
 
 .tarot-card-back {
@@ -2192,7 +2313,25 @@ export default {
 }
 
 .card-flip {
-  transform: rotateY(180deg);
+  animation: cardReveal 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Animation d'apparition pour le contenu de la carte retournée */
+@keyframes cardContentReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-content-reveal {
+  animation: cardContentReveal 1s ease-out 1.5s forwards;
+  opacity: 0;
 }
 
 /* Animation pour le texte narratif */
