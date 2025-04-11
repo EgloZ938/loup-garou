@@ -221,8 +221,11 @@ export function createDeathAnnounceSequence(camp) {
 // Séquence d'animation pour la mort d'un amoureux
 export function createLoverDeathSequence() {
     return [
-        { step: 1, name: 'heartbreak', delay: 1500 },        // Cœur qui se brise
-        { step: 2, name: 'roleReveal', delay: 1500 },        // Révélation du rôle
-        { step: 3, name: 'completion', delay: 5000, completionDelay: 5000 }  // Timer final avec délai explicite
+        { step: 1, name: 'heartbeatStart', delay: 1500 },     // Battements initiaux et particules
+        { step: 2, name: 'connectionLost', delay: 2000 },     // Visualisation du lien d'amour brisé
+        { step: 3, name: 'heartShatter', delay: 2000 },       // Cœur qui se brise avec fissures
+        { step: 4, name: 'roleReveal', delay: 3000 },         // Révélation du rôle avec transition
+        { step: 5, name: 'finalHeartbeat', delay: 1500 },     // Dernier battement de cœur
+        { step: 6, name: 'completion', delay: 2000, completionDelay: 3000 }  // Timer final
     ];
 }

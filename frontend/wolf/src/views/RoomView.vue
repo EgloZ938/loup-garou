@@ -901,81 +901,165 @@
     <div v-if="showLoverDeathAnimation"
       class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-50 transition-all duration-500"
       :class="{ 'opacity-100': showLoverDeathAnimation, 'opacity-0': !showLoverDeathAnimation }">
-      <div class="text-center max-w-xl">
-        <div class="space-y-8 transform transition-all duration-700 ease-out"
-          :class="{ 'opacity-100 translate-y-0': showLoverDeathAnimation, 'opacity-0 translate-y-10': !showLoverDeathAnimation }">
-          <h2 class="text-5xl font-bold text-pink-400 mb-6">Mort par chagrin</h2>
 
-          <!-- Animation du coeur brisé -->
-          <div class="relative mx-auto w-40 h-40 mb-4">
-            <img src="/assets/avatar_default2.png" :alt="loverVictim"
-              class="w-40 h-40 rounded-full border-4 border-pink-400 opacity-80 transition-all duration-500"
-              :class="{ 'grayscale': loverHeartbreakStep >= 1 }">
-
-            <!-- Coeur brisé -->
-            <div class="absolute inset-0 flex items-center justify-center">
-              <img src="/assets/coeur_rose.png" alt="Coeur brisé" class="w-32 h-32 transition-all duration-1000"
-                :class="{ 'scale-0 opacity-0': loverHeartbreakStep >= 1, 'scale-110': loverHeartbreakStep === 0 }">
-            </div>
-          </div>
-
-          <!-- Nom de l'amoureux -->
-          <div class="text-4xl font-bold text-gray-300">
-            {{ loverVictim }} est mort(e) de chagrin!
-          </div>
-
-          <!-- Révélation du rôle -->
-          <transition enter-active-class="transition duration-1000 transform" enter-from-class="opacity-0 scale-75"
-            enter-to-class="opacity-100 scale-100" appear>
-            <div v-if="loverHeartbreakStep >= 2" class="mt-10 space-y-4">
-              <!-- Titre de la révélation -->
-              <h3 class="text-2xl text-gray-400 mb-2">Révélation du rôle</h3>
-
-              <!-- Icône du rôle -->
-              <div v-if="loverRoleDetails" class="relative inline-block mb-2">
-                <div class="absolute -inset-2 rounded-full opacity-50" :class="{
-                  'bg-red-500/20 animate-pulse': loverVictimRole?.camp === 'Loups-Garous',
-                  'bg-blue-500/20 animate-pulse': loverVictimRole?.camp === 'Villageois',
-                  'bg-yellow-500/20 animate-pulse': loverVictimRole?.camp === 'Neutre'
-                }"></div>
-                <img :src="loverRoleDetails.icon" :alt="loverVictimRole?.role"
-                  class="w-24 h-24 mx-auto rounded-full border-4 relative" :class="{
-                    'border-red-400': loverVictimRole?.camp === 'Loups-Garous',
-                    'border-blue-400': loverVictimRole?.camp === 'Villageois',
-                    'border-yellow-400': loverVictimRole?.camp === 'Neutre'
-                  }">
-              </div>
-
-              <!-- Nom du rôle avec animation de texte -->
-              <div class="text-3xl font-bold animate-pulse" :class="{
-                'text-red-400': loverVictimRole?.camp === 'Loups-Garous',
-                'text-blue-400': loverVictimRole?.camp === 'Villageois',
-                'text-yellow-400': loverVictimRole?.camp === 'Neutre'
-              }">
-                {{ loverVictimRole?.role }}
-              </div>
-
-              <!-- Camp du joueur -->
-              <div class="mt-2 px-6 py-2 rounded-full inline-block" :class="{
-                'bg-red-500/10 text-red-400': loverVictimRole?.camp === 'Loups-Garous',
-                'bg-blue-500/10 text-blue-400': loverVictimRole?.camp === 'Villageois',
-                'bg-yellow-500/10 text-yellow-400': loverVictimRole?.camp === 'Neutre'
-              }">
-                {{ loverVictimRole?.camp }}
-              </div>
-            </div>
-          </transition>
-
-          <!-- Timer pour fermeture automatique -->
-          <div v-if="loverHeartbreakStep >= 2 && loverDeathCloseTimer > 0" class="mt-8 text-gray-400 text-sm">
-            Ce message se fermera dans {{ loverDeathCloseTimer }}s
-          </div>
+      <!-- Particules d'amour flottantes en arrière-plan -->
+      <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div v-for="i in 15" :key="`heart-particle-${i}`" class="absolute w-3 h-3 rounded-full animate-float opacity-0"
+          :class="{ 'heart-particle-visible': loverHeartbreakStep >= 1 }" :style="{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+            backgroundImage: 'radial-gradient(circle, rgba(244, 114, 182, 0.6) 0%, transparent 70%)',
+            animationDuration: `${Math.random() * 5 + 10}s`,
+            animationDelay: `${Math.random() * 2}s`,
+            transform: `scale(${Math.random() * 0.5 + 0.8})`,
+          }">
         </div>
       </div>
-      <div v-if="showLoverDeathAnimation && loverHeartbreakStep >= 2 && loverDeathCloseTimer <= 0"
-        class="mt-8 text-center">
+
+      <!-- Vagues d'énergie qui pulsent depuis le centre -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div v-for="i in 3" :key="`pulse-wave-${i}`" class="absolute rounded-full bg-pink-500/5 pulse-wave opacity-0"
+          :style="{
+            animationDelay: `${i * 1.5}s`,
+            animationPlayState: loverHeartbreakStep >= 1 && loverHeartbreakStep < 4 ? 'running' : 'paused'
+          }">
+        </div>
+      </div>
+
+      <div class="text-center max-w-xl z-10 relative">
+        <!-- Titre qui apparaît avec un effet de fondu -->
+        <h2 class="text-5xl font-bold text-pink-400 mb-6 opacity-0 transform transition-all duration-1000 ease-out"
+          :class="{ 'opacity-100 translate-y-0': loverHeartbreakStep >= 1, 'translate-y-10': loverHeartbreakStep < 1 }">
+          Mort par chagrin
+        </h2>
+
+        <!-- Conteneur de l'avatar et du cœur -->
+        <div class="relative mx-auto w-40 h-40 mb-8">
+          <!-- Avatar -->
+          <img :src="'/assets/avatar_default2.png'" :alt="loverVictim"
+            class="w-40 h-40 rounded-full border-4 border-pink-400 relative z-10 transition-all duration-2000" :class="{
+              'grayscale': loverHeartbreakStep >= 3,
+              'animate-heartbeat-slow': loverHeartbreakStep >= 1 && loverHeartbreakStep < 3,
+              'animate-heartbeat-fading': loverHeartbreakStep >= 3 && loverHeartbreakStep < 5,
+              'shadow-lg shadow-pink-500/30': loverHeartbreakStep < 3
+            }">
+
+          <!-- Lien d'amour (visible seulement à l'étape 2) -->
+          <div v-if="loverHeartbreakStep >= 2" class="absolute inset-0 love-connection opacity-0"
+            :class="{ 'animate-love-connection': loverHeartbreakStep === 2, 'opacity-0': loverHeartbreakStep > 2 }">
+          </div>
+
+          <!-- Cœur derrière l'avatar -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <img src="/assets/coeur_rose.png" alt="Cœur" class="w-56 h-56 transition-all duration-1000 transform -z-10"
+              :class="{
+                'scale-100 opacity-80 animate-heartbeat-slow': loverHeartbreakStep < 3,
+                'heart-shatter': loverHeartbreakStep === 3,
+                'opacity-0 scale-150': loverHeartbreakStep > 3
+              }">
+          </div>
+
+          <!-- Fissures qui partent du cœur -->
+          <template v-if="loverHeartbreakStep >= 3">
+            <div v-for="i in 8" :key="`crack-${i}`" class="absolute bg-pink-600 opacity-0 heart-crack-line" :style="{
+              width: '2px',
+              height: `${Math.random() * 100 + 50}px`,
+              left: '50%',
+              top: '50%',
+              transform: `rotate(${i * 45}deg) translateY(-50%)`,
+              transformOrigin: 'top',
+              animationDelay: `${i * 0.1}s`
+            }">
+            </div>
+          </template>
+
+          <!-- Effet de particules du cœur brisé -->
+          <div v-if="loverHeartbreakStep >= 3" class="absolute inset-0 flex items-center justify-center">
+            <div v-for="i in 12" :key="`heart-piece-${i}`"
+              class="absolute w-2 h-2 rounded-full bg-pink-500 heart-piece opacity-0" :style="{
+                animationDelay: `${i * 0.1}s`,
+                '--angle': `${(i * 30) % 360}deg`,
+                '--distance': `${Math.random() * 100 + 50}px`
+              }">
+            </div>
+          </div>
+        </div>
+
+        <!-- Nom de la victime avec animation de texte -->
+        <div class="text-4xl font-bold text-gray-300 mb-10 transition-all duration-1000 transform" :class="{
+          'opacity-100 translate-y-0': loverHeartbreakStep >= 1,
+          'opacity-0 translate-y-10': loverHeartbreakStep < 1,
+          'text-gray-300': loverHeartbreakStep < 4,
+          'text-gray-400': loverHeartbreakStep >= 4
+        }">
+          {{ loverVictim }} est mort<span v-if="loverVictim && loverVictim.endsWith('e')">e</span> de chagrin
+        </div>
+
+        <!-- Révélation du rôle -->
+        <div v-if="loverHeartbreakStep >= 4"
+          class="mt-10 space-y-6 transition-all duration-1500 transform role-reveal-container" :class="{
+            'opacity-100 translate-y-0': loverHeartbreakStep >= 4,
+            'opacity-0 translate-y-10': loverHeartbreakStep < 4
+          }">
+
+          <!-- Titre de la révélation -->
+          <h3 class="text-2xl text-gray-400 mb-2">Révélation du rôle</h3>
+
+          <!-- Icône du rôle avec aura selon le camp -->
+          <div v-if="loverRoleDetails" class="relative inline-block mb-2">
+            <div class="absolute -inset-2 rounded-full opacity-50 role-aura" :class="{
+              'bg-red-500/20 animate-pulse-slow': loverVictimRole?.camp === 'Loups-Garous',
+              'bg-blue-500/20 animate-pulse-slow': loverVictimRole?.camp === 'Villageois',
+              'bg-yellow-500/20 animate-pulse-slow': loverVictimRole?.camp === 'Neutre'
+            }">
+            </div>
+            <img :src="loverRoleDetails.icon" :alt="loverVictimRole?.role"
+              class="w-24 h-24 mx-auto rounded-full border-4 relative animate-role-appear" :class="{
+                'border-red-400': loverVictimRole?.camp === 'Loups-Garous',
+                'border-blue-400': loverVictimRole?.camp === 'Villageois',
+                'border-yellow-400': loverVictimRole?.camp === 'Neutre'
+              }">
+          </div>
+
+          <!-- Nom du rôle -->
+          <div class="text-3xl font-bold animate-role-appear" style="animation-delay: 0.3s" :class="{
+            'text-red-400': loverVictimRole?.camp === 'Loups-Garous',
+            'text-blue-400': loverVictimRole?.camp === 'Villageois',
+            'text-yellow-400': loverVictimRole?.camp === 'Neutre'
+          }">
+            {{ loverVictimRole?.role }}
+          </div>
+
+          <!-- Camp du joueur -->
+          <div class="mt-2 px-6 py-2 rounded-full inline-block animate-role-appear" style="animation-delay: 0.6s"
+            :class="{
+              'bg-red-500/10 text-red-400': loverVictimRole?.camp === 'Loups-Garous',
+              'bg-blue-500/10 text-blue-400': loverVictimRole?.camp === 'Villageois',
+              'bg-yellow-500/10 text-yellow-400': loverVictimRole?.camp === 'Neutre'
+            }">
+            {{ loverVictimRole?.camp }}
+          </div>
+        </div>
+
+        <!-- Dernier battement de cœur en filigrane -->
+        <div v-if="loverHeartbreakStep >= 5" class="mt-8 relative">
+          <div class="w-12 h-12 mx-auto relative animate-final-heartbeat">
+            <img src="/assets/coeur_rose.png" alt="Dernier battement" class="w-full h-full opacity-40">
+          </div>
+        </div>
+
+        <!-- Timer pour fermeture automatique -->
+        <div v-if="loverHeartbreakStep >= 6 && loverDeathCloseTimer > 0"
+          class="mt-8 text-gray-400 text-sm animate-fade-in">
+          Ce message se fermera dans {{ loverDeathCloseTimer }}s
+        </div>
+      </div>
+
+      <!-- Bouton de fermeture (visible uniquement à la fin) -->
+      <div v-if="loverHeartbreakStep >= 6 && loverDeathCloseTimer <= 0"
+        class="absolute bottom-10 opacity-0 animate-fade-in">
         <button @click="closeLoverDeathAnimation"
-          class="mt-4 px-4 py-2 bg-gray-700/70 hover:bg-gray-700/90 text-gray-300 rounded-lg transition-all hover:scale-105">
+          class="px-4 py-2 bg-gray-700/70 hover:bg-gray-700/90 text-gray-300 rounded-lg transition-all hover:scale-105">
           Fermer
         </button>
       </div>
@@ -1366,61 +1450,87 @@ export default {
       loverDeathCloseTimer.value = 5; // Initialiser avec une valeur par défaut
       showLoverDeathAnimation.value = true;
 
-      // Utiliser la séquence prédéfinie avec un timer plus explicite
+      // Utiliser la séquence d'animation améliorée
       const sequence = createLoverDeathSequence();
 
       // Démarrer via animationManager
-      animationManager.startSequence('loverDeathAnimation', sequence, closeLoverDeathAnimation);
+      animationManager.startSequence('loverDeathAnimation', sequence, () => {
+        // Si toute la séquence est terminée sans intervention manuelle
+        if (showLoverDeathAnimation.value) {
+          closeLoverDeathAnimation();
+        }
+      });
 
       // Écouter les étapes
       const unsubscribe = animationManager.addListener('loverDeathAnimation', (event) => {
         if (event.type === 'step') {
           loverHeartbreakStep.value = event.step;
 
-          // Timer final pour la dernière étape avec une durée explicite
-          if (event.step === 3) {
+          // Timer final pour la dernière étape
+          if (event.step === 6) {
+            // Créer un timer géré pour le compte à rebours final
             animationManager.createTimer('loverDeathTimer', 5000,
               (remaining) => {
+                // Mise à jour à chaque tick
                 loverDeathCloseTimer.value = Math.ceil(remaining / 1000);
-                console.log('Timer lover death: ' + loverDeathCloseTimer.value); // Debugging
               },
               () => {
-                // Fonction de callback quand le timer est terminé
-                closeLoverDeathAnimation();
+                // Action à la fin du timer
+                if (showLoverDeathAnimation.value) {
+                  closeLoverDeathAnimation();
+                }
               }
             );
           }
         }
       });
 
-      // Nettoyage
+      // Nettoyage quand le composant est démonté
       onUnmounted(() => {
         unsubscribe();
         animationManager.stopAnimation('loverDeathAnimation');
+        animationManager.clearTimer('loverDeathTimer');
       });
     };
 
 
 
     const closeLoverDeathAnimation = () => {
-      showLoverDeathAnimation.value = false;
-      loverHeartbreakStep.value = 0;
-      loverDeathCloseTimer.value = 0;
+      // Si déjà en cours de fermeture, éviter les doublons
+      if (!showLoverDeathAnimation.value) return;
 
-      // Nettoyer les timers
+      // Transition de sortie progressive
+      showLoverDeathAnimation.value = false;
+
+      // Nettoyer les timers et animations
       animationManager.clearTimer('loverDeathTimer');
+      animationManager.stopAnimation('loverDeathAnimation');
 
       // Réinitialiser les variables
+      loverHeartbreakStep.value = 0;
+      loverDeathCloseTimer.value = 0;
       loverVictim.value = null;
       loverVictimRole.value = null;
       pendingLoverDeath.value = false;
       pendingLoverDeathAnnounce.value = false;
 
-      // Informer le serveur
+      // Informer le serveur (crucial pour la synchronisation)
       socketStore.socket.emit('animationCompleted', {
         animationId: 'loverDeath',
         room: props.roomCode
       });
+
+      // Ajouter un mécanisme de secours au cas où l'événement n'est pas reçu
+      // par le serveur pour une raison quelconque
+      setTimeout(() => {
+        if (gamePhase.value === 'announce') {
+          // Si on est toujours en phase d'annonce, forcer la transition à la nuit
+          socketStore.socket.emit('animationCompleted', {
+            animationId: 'loverDeath',
+            room: props.roomCode
+          });
+        }
+      }, 1000);
     };
 
 
@@ -2345,5 +2455,278 @@ export default {
   font-style: italic;
   letter-spacing: 0.5px;
   line-height: 1.6;
+}
+
+/* Animation de battement de cœur lent */
+@keyframes heartbeatSlow {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-heartbeat-slow {
+  animation: heartbeatSlow 1.5s ease-in-out infinite;
+}
+
+/* Animation de battement de cœur qui s'estompe */
+@keyframes heartbeatFading {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.02);
+    opacity: 0.4;
+  }
+
+  100% {
+    opacity: 0.2;
+  }
+}
+
+.animate-heartbeat-fading {
+  animation: heartbeatFading 2s ease-in-out forwards;
+}
+
+/* Animation de vagues qui pulsent */
+@keyframes pulseWave {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.6;
+  }
+
+  100% {
+    width: 500px;
+    height: 500px;
+    opacity: 0;
+  }
+}
+
+.pulse-wave {
+  animation: pulseWave 4s ease-out infinite;
+  opacity: 0;
+}
+
+/* Animation de fissures du cœur */
+@keyframes heartCrack {
+  0% {
+    opacity: 0;
+    height: 0;
+  }
+
+  100% {
+    opacity: 0.7;
+    height: 100px;
+  }
+}
+
+.heart-crack-line {
+  animation: heartCrack 1.5s ease-out forwards;
+}
+
+/* Animation pour les morceaux de cœur qui s'envolent */
+@keyframes heartPiece {
+  0% {
+    opacity: 0.8;
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(calc(cos(var(--angle)) * var(--distance)),
+        calc(sin(var(--angle)) * var(--distance))) scale(0);
+  }
+}
+
+.heart-piece {
+  animation: heartPiece 2s ease-out forwards;
+}
+
+/* Animation pour le cœur qui se brise */
+@keyframes heartShatter {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+    filter: blur(0);
+  }
+
+  20% {
+    transform: scale(1.1);
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  40% {
+    transform: scale(0.9);
+    opacity: 0.9;
+    filter: blur(1px);
+  }
+
+  60% {
+    transform: scale(0.8);
+    opacity: 0.8;
+    filter: blur(2px);
+  }
+
+  100% {
+    transform: scale(0.5);
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+.heart-shatter {
+  animation: heartShatter 2s forwards;
+}
+
+/* Animation pour les particules flottantes */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(var(--scale, 1));
+    opacity: 0;
+  }
+
+  10%,
+  90% {
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateY(-30px) scale(var(--scale, 1));
+    opacity: 0.8;
+  }
+}
+
+.animate-float {
+  animation: float 15s ease-in-out infinite;
+}
+
+.heart-particle-visible {
+  animation-play-state: running !important;
+  opacity: 0.6;
+}
+
+/* Animation de connexion d'amour */
+@keyframes loveConnection {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(244, 114, 182, 0);
+  }
+
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 30px rgba(244, 114, 182, 0.6);
+  }
+
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(244, 114, 182, 0);
+  }
+}
+
+.love-connection {
+  border-radius: 50%;
+  border: 2px dashed rgba(244, 114, 182, 0.5);
+}
+
+.animate-love-connection {
+  animation: loveConnection 2s forwards;
+}
+
+/* Animation d'apparition du rôle */
+@keyframes roleAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-role-appear {
+  animation: roleAppear 1s ease-out forwards;
+  opacity: 0;
+}
+
+/* Animation de fondu */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-out forwards;
+}
+
+/* Animation de pulse lent */
+@keyframes pulseSlow {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s ease-in-out infinite;
+}
+
+/* Animation du dernier battement */
+@keyframes finalHeartbeat {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+
+  30% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+
+  60% {
+    transform: scale(0.9);
+    opacity: 0.3;
+  }
+
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-final-heartbeat {
+  animation: finalHeartbeat 3s ease-in-out forwards;
+}
+
+.role-reveal-container {
+  transition: opacity 1s ease-out, transform 1s ease-out;
+}
+
+.role-aura {
+  transition: all 0.5s ease-out;
 }
 </style>
